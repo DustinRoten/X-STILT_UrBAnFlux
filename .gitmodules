@@ -2,3 +2,6 @@
 	path = X-STILT
 	url = https://github.com/uataq/X-STILT.git
 	branch = merge_stilt-hysplit
+[submodule "stilt_hysplit"]
+	path = X-STILT/stilt_hysplit
+	url = https://github.com/uataq/stilt.git
