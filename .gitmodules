@@ -1,0 +1,4 @@
+[submodule "X-STILT"]
+	path = X-STILT
+	url = https://github.com/uataq/X-STILT.git
+	branch = merge_stilt-hysplit
