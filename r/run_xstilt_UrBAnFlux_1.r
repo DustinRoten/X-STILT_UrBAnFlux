@@ -142,9 +142,8 @@ run_xstilt_UrBAnFlux_1 <- function(input.variables = NULL) {
     
     # whether to plot them on maps, plotTF = T/F,
     # this helps you choose which overpass to simulate, see 'tt' below
-    ggmap.obs.info(plotTF = F, site, store.path, zoom = 8,
-                   all.timestr, oco.sensor, oco.ver, oco.path, lon.lat,
-                   xstilt_wd, dlat.urban, dlon.urban)
+    ggmap.obs.info(plotTF = T, site, store.path, all.timestr, oco.sensor, oco.ver,
+                   oco.path, sif.path, lon.lat, xstilt_wd, dlat.urban, dlon.urban)
     
     
     ### 5) *** NOW choose the timestr that you'd like to work on...
@@ -183,15 +182,26 @@ run_xstilt_UrBAnFlux_1 <- function(input.variables = NULL) {
   
   # path for the ARL format of meteo fields
   # simulation_step() will find corresponding files
-  met        <- input.variables$met         # choose met fields
-  met.path   <- input.variables$met.path    # path of met fields
-  met.format <- input.variables$met.format  # met file name convention
-  met.num    <- input.variables$met.num     # min number of files needed
+  met             <- input.variables$met         # choose met fields
+  met_path        <- input.variables$met_path    # path of met fields
+  met_file_format <- input.variables$met_file_format  # met file name convention
+  n_met_min       <- input.variables$n_met_min     # min number of files needed
+  
+  # OPTION for subseting met fields if met_subgrid_enable is on, 
+  # useful for large met fields like GFS or HRRR
+  met_subgrid_buffer <- 0.1   # Percent to extend footprint area for met subdomain
+  met_subgrid_enable <- T    
+  
+  # if set, extracts the defined number of vertical levels from the meteorological 
+  # data files to further accelerate simulations, default is NA
+  met_subgrid_levels <- NA    
   
   # path to grab or store trajec, foot and potential trans err stat DW, 07/31/2018
   # ourput directory for storing traj with default convention;
   # store traj with wind err in a separate directory if run_hor_err = T
-  outdir <- file.path(store.path, paste('out', timestr, met, oco.sensor, sep = '_'))
+  outdir <- file.path(store.path,
+                      paste('out', gsub(' ', '', site),
+                            timestr, met, oco.sensor, sep = '_'))
   if (run_hor_err) outdir <- gsub('out', 'outerr', outdir)
   cat('Done with basis settings...\n')
   
@@ -361,8 +371,11 @@ run_xstilt_UrBAnFlux_1 <- function(input.variables = NULL) {
                      ctflux.path = ctflux.path, ctmole.path = ctmole.path, 
                      delt = delt, emiss.file = emiss.file, foot.info = foot.info, 
                      hnf_plume = hnf_plume, hor.err = hor.err, jobname = jobname,
-                     met = met, met.format = met.format, met.num = met.num, 
-                     met.path = met.path, nhrs = nhrs, n_cores = n_cores,
+                     met = met, met_file_format = met_file_format, n_met_min = n_met_min,
+                     met_subgrid_buffer = met_subgrid_buffer, 
+                     met_subgrid_enable = met_subgrid_enable,
+                     met_subgrid_levels = met_subgrid_levels,
+                     met_path = met_path, nhrs = nhrs, n_cores = n_cores,
                      n_nodes = n_nodes, numpar = numpar, outdir = outdir, 
                      oco.path = oco.path, overwrite_wgttraj = overwrite_wgttraj,
                      pbl.err = pbl.err, project = project, projection = projection,
