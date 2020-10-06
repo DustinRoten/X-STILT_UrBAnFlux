@@ -14,13 +14,24 @@ odiac.vname <- c('2016', '2017', '2018', '2019')[4] # ODIAC version
 project <- oco.sensor   # name your project
 
 store.path <- '/uufs/chpc.utah.edu/common/home/lin-group11/TEST'
-  
-# setting up the OCO sounding search grid
+
+#####
+### setting up the OCO sounding search grid
+### These variables will be ignored if 'OCO-2/OCO-3' is not selected
 urbanTF <- T; dlon.urban <- 0.5; dlat.urban <- 0.5
 timestr <- c(
-  '2019072620',
-  '2019082920'
+  '2019072620'
 )# If unsure, set as NA.
+
+### setting up the custom X-STILT grid
+### These variables will be ignored if 'Modeled' is not selected
+top.left  <- list(-118.7, 34.5)  # Include the top-left corner of the custom grid
+top.right <- list(-117.4, 33.95) # Include the top-right corner of the custom grid
+width     <- 0.8              # Include the desired width of the custom grid
+timestamp <- c(
+  '20190726-203000'
+) # Include timestamps in the format 'YYYYMMDD-HHMMSS'
+#####
 
 # select what type of analysis is performed
 run_trajec <- T     # whether to generate trajec; runs start in STEP 6
@@ -49,7 +60,7 @@ selTF <- F
 
 limit_recp <- T
 
-foot.res <- 1/10
+foot.res <- 1/120
 
 ### 2) whether weighted footprint by AK and PW for column simulations (X-STILT)
 # NA: no weighting performed for fixed receptor simulations
@@ -71,25 +82,51 @@ n_nodes  <- 5
 n_cores  <- 8
 timeout  <- 4 * 60 * 60  # in sec
 job.time <- '04:00:00'    # total job time
+#########################################################################################
+input.variables <- data.frame(
+  homedir = homedir,
+  site = site,
+  input.path = input.path,
+  oco.sensor = oco.sensor,
+  data.level = data.level,
+  oco.ver = oco.ver,
+  odiac.vname = odiac.vname,
+  project = oco.sensor,
+  store.path = store.path,
+  urbanTF = urbanTF,
+  dlon.urban = dlon.urban,
+  dlat.urban = dlat.urban,
+  timestr = timestr,
+  top.left = paste(as.character(top.left), collapse = ','),
+  top.right = paste(as.character(top.right), collapse = ','), 
+  width = width,
+  timestamp = timestamp,
+  run_trajec = run_trajec,
+  run_foot = run_foot,
+  columnTF = columnTF,
+  run_hor_err = run_hor_err,
+  run_ver_err = run_ver_err,
+  run_emiss_err = run_emiss_err,
+  run_sim = run_sim,
+  delt = delt,
+  nhrs = nhrs,
+  met = met,
+  met_path = met_path,
+  met_file_format = met_file_format,
+  n_met_min = n_met_min,
+  selTF = selTF,
+  limit_recp = limit_recp,
+  foot.res = foot.res,
+  ak.wgt  = ak.wgt,
+  pwf.wgt = pwf.wgt,
+  overwrite_wgttraj = overwrite_wgttraj,
+  hnf_plume = hnf_plume,
+  smooth_factor = smooth_factor,
+  time_integrate = time_integrate,
+  projection = projection,
+  n_nodes = n_nodes,
+  n_cores = n_cores,
+  timeout = timeout,
+  job.time = job.time)
 
-
-input.variables <-
-  data.frame(homedir = homedir, site = site, input.path = input.path, oco.sensor = oco.sensor,
-             data.level = data.level, oco.ver = oco.ver, odiac.vname = odiac.vname, project = project,
-             store.path = store.path, urbanTF = urbanTF, lon.urban = dlon.urban, dlat.urban = dlat.urban,
-             timestr = timestr, run_trajec = run_trajec, run_foot = run_foot, columnTF = columnTF,
-             run_hor_err = run_hor_err, run_ver_err = run_ver_err, run_emiss_err = run_emiss_err,
-             run_sim = run_sim, delt = delt, nhrs = nhrs, met = met, met_path = met_path,
-             met_file_format = met_file_format, n_met_min = n_met_min, selTF = selTF,
-             limit_recp = limit_recp, foot.res = foot.res, ak.wgt = ak.wgt, pwf.wgt = pwf.wgt,
-             overwrite_wgttraj = overwrite_wgttraj, hnf_plume = hnf_plume, smooth_factor = smooth_factor,
-             time_integrate = time_integrate, projection = projection, n_nodes = n_nodes, n_cores = n_cores,
-             timeout = timeout, job.time = job.time
-  )[1,]
-
-for(i in 1:nrow(input.variables)) {
-  run_xstilt_UrBAnFlux_1(input.variables)
-  
-  # monitor parallel jobs
-  SLURM.jobs(partition = 'lin-kp')
-}
+submit.xstilt(input.variables)
