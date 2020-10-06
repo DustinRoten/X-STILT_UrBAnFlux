@@ -387,7 +387,7 @@ run_xstilt_UrBAnFlux_1 <- function(input.variables = NULL) {
                      tropomi.path = list(tropomi.path), varstrajec = varstrajec, 
                      xstilt_wd = xstilt_wd)        
     cat('Done with creating namelist...\n')
-    
+
     # call run.xstilt() to start running trajec and foot
     run.xstilt(namelist)  # see more variables defined in run.xstilt()
     q('no')

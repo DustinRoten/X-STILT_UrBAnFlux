@@ -5,7 +5,7 @@
 #' Author: Dustin Roten 9/22/2020
 #' 
 
-run_xstilt_UrBAnFlux_1 <- function(input.variables = NULL) {
+run_xstilt_UrBAnFlux_2 <- function(input.variables = NULL) {
   
   #' create a namelist for running X-STILT trajectories
   #' @author Dien Wu, 04/18/2018
@@ -87,74 +87,23 @@ run_xstilt_UrBAnFlux_1 <- function(input.variables = NULL) {
   if (api.key == '') stop('Missing googleAPI, insert your API code in insert_ggAPI.csv\n')
   register_google(key = api.key)
   
-  
   #------------------------------ STEP 1 --------------------------------------- #
   ### 1) input dlat, dlon to get spatial domain around city center
   #site <- 'Riyadh'   # choose a city
   site <- input.variables$site
   lon.lat <- get.lon.lat(site = site, dlon = 1, dlat = 1.5)
   
-  
   ### 2) required paths for input datasets
   # e.g., OCO-2/3 XCO2, SIF, NOAA RAOB, ODAIC emission (1km tiff files)
   input.path  <- input.variables$input.path
-  oco.sensor  <- input.variables$oco.sensor
-  data.level  <- input.variables$data.level
-  oco.ver     <- input.variables$oco.ver
-  oco.path    <- list.files(file.path(input.path, oco.sensor, data.level),
-                            pattern = paste0('\\_', oco.ver, '$'),
-                            full.names = TRUE)
-  sif.path    <- file.path(input.path, oco.sensor, 'L2_Lite_SIF_V8r')
   raob.path   <- file.path(input.path, 'RAOB', gsub(' ', '', site))  # NOAA radiosonde
-  odiac.vname <- input.variables$odiac.vname       # ODIAC version
-  tiff.path   <- file.path(input.path, 'ODIAC', paste0('ODIAC', odiac.vname))  
   project     <- input.variables$project   # name your project
-  
-  ### Not currently in parent script
-  # if tropomi.speci includes NA, no runs related to TROPOMI will be generated
-  tropomi.speci <- c(NA, 'CO', 'NO2')[1]   
-  tropomi.path <- file.path(input.path, 'TROPOMI', paste0('L2_', tropomi.speci))
-  tropomi.hir.path <- paste0(tropomi.path, '_HiR')    # higher res TROPOMI
   
   ## path for storing output or anything related to trans err
   store.path <- input.variables$store.path
   err.path   <- file.path(store.path, 'wind_err')
   dir.create(store.path, showWarnings = F, recursive = T)
   dir.create(err.path, showWarnings = F, recursive = T)
-  
-  ### 3) call get.site.track() to get lon.lat and OCO2 overpasses info
-  # whether to search for overpasses over urban region,
-  # defined as city.lat +/- dlat, city.lon +/- dlon
-  if(is.na(timestr)) {
-    urbanTF <- input.variables$urbanTF
-    dlon.urban <- input.variables$dlon.urban; dlat.urban <- input.variables$dlat.urban
-    oco.track <- get.site.track.v2(site, oco.sensor, oco.ver, oco.path, searchTF = F, 
-                                   date.range = c('20140101', '20201231'), 
-                                   thred.count.per.deg = 100, lon.lat, 
-                                   urbanTF, dlon.urban, dlat.urban, 
-                                   thred.count.per.deg.urban = 50, rmTF = F)
-    
-    # one can further subset 'oco.track' based on sounding # or data quality
-    # over entire lon.lat domain or near city center
-    # see columns 'qf.count' or 'wl.count' in 'oco.track'
-    oco.track   <- oco.track %>% filter(qf.urban.count > 50); print(oco.track)
-    all.timestr <- oco.track$timestr
-    
-    # whether to plot them on maps, plotTF = T/F,
-    # this helps you choose which overpass to simulate, see 'tt' below
-    ggmap.obs.info(plotTF = T, site, store.path, all.timestr, oco.sensor, oco.ver,
-                   oco.path, sif.path, lon.lat, xstilt_wd, dlat.urban, dlon.urban)
-    
-    
-    ### 5) *** NOW choose the timestr that you'd like to work on...
-    message(paste0('An overpass (timestr) was not indicated.', '\n',
-                   'Please select one from the generated list.'))
-    return(cat('Stopping script now.'))
-  } else {timestr <- input.variables$timestr}
-  cat(paste('Working on:', timestr, 'for city/region:', site, '...\n\n'))
-  
-  cat('Done with choosing cities & overpasses...\n')
-  
   
   #------------------------------ STEP 2 --------------------------------------- #
   # T:rerun hymodelc, even if particle location object found
@@ -199,7 +148,11 @@ run_xstilt_UrBAnFlux_1 <- function(input.variables = NULL) {
   # path to grab or store trajec, foot and potential trans err stat DW, 07/31/2018
   # ourput directory for storing traj with default convention;
   # store traj with wind err in a separate directory if run_hor_err = T
-  outdir <- file.path(store.path, paste('out', timestr, met, oco.sensor, sep = '_'))
+ 
+  timestamp <- strftime(timestamp, format = '%Y%m%d', tz = 'UTC')
+  outdir <- file.path(store.path,
+                      paste('out', gsub(' ', '', site),
+                            timestamp, met, oco.sensor, sep = '_'))
   if (run_hor_err) outdir <- gsub('out', 'outerr', outdir)
   cat('Done with basis settings...\n')
   
@@ -248,15 +201,13 @@ run_xstilt_UrBAnFlux_1 <- function(input.variables = NULL) {
   recp.num <- NULL     # can be a number for max num of receptors or a vector, 1:20
   find.lat <- NULL     # for debug or test, model one sounding
   
-  ### 3) select satellite soundings, plotTF for whether plotting OCO-2 observed XCO2
-  recp.info <- get.recp.info(timestr, oco.ver, oco.path, lon.lat, selTF, 
-                             recp.indx, recp.num, find.lat, agl, run_trajec, 
-                             trajpath = file.path(outdir, 'by-id'))
-  if(input.variables$limit_recp == T) {
-    recp.info <- subset(recp.info,
-                        lati <= lon.lat$citylat + dlat.urban &
-                          lati >= lon.lat$citylat - dlat.urban)
-  }
+  ### 3) select column-receptor locations here
+  recp.info <- generate.grid(top.left = input.variables$top.left,
+                             top.right = input.variables$top.right,
+                             width = input.variables$width, receptor.resolution = 0.02,
+                             date.time = input.variables$timestamp, agl = agl,
+                             interpolation.resolution = 2, output.path = outdir)
+  recp.info <- subset(recp.info, type == 'xstilt')[,c(1:3,6)] #DELETE THE ROW RESTRICTION!
   nrecp <- nrow(recp.info)
   cat(paste('Done with receptor setup...total', nrecp, 'receptors..\n'))
   
