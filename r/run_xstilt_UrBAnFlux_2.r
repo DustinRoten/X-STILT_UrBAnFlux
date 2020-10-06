@@ -149,10 +149,11 @@ run_xstilt_UrBAnFlux_2 <- function(input.variables = NULL) {
   # ourput directory for storing traj with default convention;
   # store traj with wind err in a separate directory if run_hor_err = T
  
-  timestamp <- strftime(timestamp, format = '%Y%m%d', tz = 'UTC')
+  timestr<- strftime(as.POSIXct(timestamp, format = '%Y%m%d-%H%M%S', tz = 'UTC'),
+                        format = '%Y%m%d%H%M', tz = 'UTC')
   outdir <- file.path(store.path,
                       paste('out', gsub(' ', '', site),
-                            timestamp, met, oco.sensor, sep = '_'))
+                            timestr, met, oco.sensor, sep = '_'))
   if (run_hor_err) outdir <- gsub('out', 'outerr', outdir)
   cat('Done with basis settings...\n')
   
@@ -202,8 +203,12 @@ run_xstilt_UrBAnFlux_2 <- function(input.variables = NULL) {
   find.lat <- NULL     # for debug or test, model one sounding
   
   ### 3) select column-receptor locations here
-  recp.info <- generate.grid(top.left = input.variables$top.left,
-                             top.right = input.variables$top.right,
+  # top.left and top.right are passed to this script as a string.
+  # split the string at the comma and treat the values as numeric.
+  top.left <- as.numeric(unlist(strsplit(input.variables$top.left, split = ',')))
+  top.right <- as.numeric(unlist(strsplit(input.variables$top.right, split = ',')))
+  
+  recp.info <- generate.grid(top.left = top.left, top.right = top.right,
                              width = input.variables$width, receptor.resolution = 0.02,
                              date.time = input.variables$timestamp, agl = agl,
                              interpolation.resolution = 2, output.path = outdir)
@@ -326,17 +331,16 @@ run_xstilt_UrBAnFlux_2 <- function(input.variables = NULL) {
                      met_subgrid_levels = met_subgrid_levels,
                      met_path = met_path, nhrs = nhrs, n_cores = n_cores,
                      n_nodes = n_nodes, numpar = numpar, outdir = outdir, 
-                     oco.path = oco.path, overwrite_wgttraj = overwrite_wgttraj,
+                     oco.path = NA, overwrite_wgttraj = overwrite_wgttraj,
                      pbl.err = pbl.err, project = project, projection = projection,
                      pwf.wgt = pwf.wgt, recp.info = recp.info, run_foot = run_foot, 
                      run_hor_err = run_hor_err, run_trajec = run_trajec, 
                      slurm = slurm, slurm_options = slurm_options, 
                      smooth_factor = smooth_factor, time_integrate = time_integrate, 
-                     timeout = timeout, tropomi.speci = list(tropomi.speci), 
-                     tropomi.path = list(tropomi.path), varstrajec = varstrajec, 
-                     xstilt_wd = xstilt_wd)        
+                     timeout = timeout, tropomi.speci = NA, tropomi.path = NA,
+                     varstrajec = varstrajec, xstilt_wd = xstilt_wd)        
     cat('Done with creating namelist...\n')
-    
+
     # call run.xstilt() to start running trajec and foot
     run.xstilt(namelist)  # see more variables defined in run.xstilt()
     q('no')
