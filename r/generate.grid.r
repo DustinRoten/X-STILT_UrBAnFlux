@@ -8,7 +8,6 @@ generate.grid <- function(top.left = NULL, top.right = NULL, width = NULL, recep
     stop('An input has been left as NULL.')
   
   # basic geometric values are calculated here
-  top.left <- unlist(top.left); top.right <- unlist(top.right)
   distance <- sqrt((top.right[1]-top.left[1])^2 + ((top.right[2]-top.left[2]))^2)
   iterations <- ceiling(distance/receptor.resolution)
   angle <- atan2(y = top.right[2]-top.left[2], x = top.right[1]-top.left[1])
@@ -20,7 +19,7 @@ generate.grid <- function(top.left = NULL, top.right = NULL, width = NULL, recep
   x.vals[1] <- top.left[1]; y.vals[1] <- top.left[2]
   for(i in 2:iterations) {
     x.vals[i] <- x.vals[i-1] + delta.x
-    y.vals[i] <- y.vals[i-1] + delta.y
+    y.vals[i] <- y.vals[i-1] - 0
   }
   
   # iterate the initial row of receptors
@@ -28,15 +27,20 @@ generate.grid <- function(top.left = NULL, top.right = NULL, width = NULL, recep
   names(receptor.grid) <- c('lon', 'lat', 'x.idx', 'y.idx')
   for(j in 1:ceiling(width/receptor.resolution)) {
     
-    if(angle > 0) add.data <- data.frame(x.vals + delta.x*j, y.vals - delta.y*j, 1:iterations, j+1)
-    if(angle <= 0) add.data <- data.frame(x.vals - delta.x*j, y.vals + delta.y*j, 1:iterations, j+1)
+    add.data <- data.frame(x.vals, y.vals - j*receptor.resolution,
+                           1:iterations, j+1)
     
     names(add.data) <- names(receptor.grid)
     receptor.grid <- rbind(receptor.grid, add.data)
   }
   
+  rotated.lons <- ((receptor.grid$lon - top.left[1])*cos(angle) -
+                     (receptor.grid$lat-top.left[2])*sin(angle)) + top.left[1]
+  rotated.lats <- ((receptor.grid$lon - top.left[1])*sin(angle) + 
+                     (receptor.grid$lat - top.left[2])*cos(angle)) + top.left[2]
+  
   receptor.grid <- data.frame(as.POSIXct(date.time, '%Y%m%d-%H%M%S', tz = 'UTC'),
-                              receptor.grid$lat, receptor.grid$lon,
+                              rotated.lats, rotated.lons,
                               receptor.grid$y.idx, receptor.grid$x.idx)
   names(receptor.grid) <- c('run_time', 'lati', 'long', 'y.idx', 'x.idx')
   receptor.grid$zagl <- list(agl)
