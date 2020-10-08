@@ -2,6 +2,7 @@ options(stringsAsFactors = FALSE)
 setwd('/uufs/chpc.utah.edu/common/home/u1211790/X-STILT_UrBAnFlux')
 source('r/dependencies.r')
 
+user.id <- 'u1211790'
 homedir <- '/uufs/chpc.utah.edu/common/home/u1211790'
 site <- 'Los Angeles'
 
@@ -25,11 +26,11 @@ timestr <- c(
 
 ### setting up the custom X-STILT grid
 ### These variables will be ignored if 'Modeled' is not selected
-top.left  <- list(-118.7, 34.5)  # Include the top-left corner of the custom grid
-top.right <- list(-117.4, 33.95) # Include the top-right corner of the custom grid
-width     <- 0.8              # Include the desired width of the custom grid
+top.left  <- list(-118.25, 34.5)  # Include the top-left corner of the custom grid
+top.right <- list(-117.75, 34.5) # Include the top-right corner of the custom grid
+width     <- 1              # Include the desired width of the custom grid
 timestamp <- c(
-  '20190726-203000'
+  '20190726-205900'
 ) # Include timestamps in the format 'YYYYMMDD-HHMMSS'
 #####
 
@@ -64,7 +65,7 @@ foot.res <- 1/120
 
 ### 2) whether weighted footprint by AK and PW for column simulations (X-STILT)
 # NA: no weighting performed for fixed receptor simulations
-ak.wgt  <- TRUE
+ak.wgt  <- if(oco.sensor == 'Modeled') {FALSE} else {TRUE}
 pwf.wgt <- TRUE
 
 # whether to overwrite existing wgttraj.rds files; if F, read from existing wgttraj.rds
@@ -129,4 +130,4 @@ input.variables <- data.frame(
   timeout = timeout,
   job.time = job.time)
 
-submit.xstilt(input.variables)
+submit.xstilt(input.variables, user.id)
