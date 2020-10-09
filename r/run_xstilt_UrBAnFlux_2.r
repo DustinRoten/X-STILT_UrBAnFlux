@@ -208,11 +208,15 @@ run_xstilt_UrBAnFlux_2 <- function(input.variables = NULL) {
   top.left <- as.numeric(unlist(strsplit(input.variables$top.left, split = ',')))
   top.right <- as.numeric(unlist(strsplit(input.variables$top.right, split = ',')))
   
+  # Get the gridding resolution (grid.res) and interpolation resolution (interp.res)
+  grid.res <- input.variables$receptor.resolution
+  interp.res <- input.variables$interpolation.resolution
+  
   recp.info <- generate.grid(top.left = top.left, top.right = top.right,
-                             width = input.variables$width, receptor.resolution = 0.02,
+                             width = input.variables$width, receptor.resolution = grid.res,
                              date.time = input.variables$timestamp, agl = agl,
-                             interpolation.resolution = 2, output.path = outdir)
-  recp.info <- subset(recp.info, type == 'xstilt')[,c(1:3,6)] #DELETE THE ROW RESTRICTION!
+                             interpolation.resolution = interp.res, output.path = outdir)
+  recp.info <- subset(recp.info, type == 'xstilt')[,c(1:3,6)]
   nrecp <- nrow(recp.info)
   cat(paste('Done with receptor setup...total', nrecp, 'receptors..\n'))
   

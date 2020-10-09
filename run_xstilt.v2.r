@@ -29,6 +29,10 @@ timestr <- c(
 top.left  <- list(-118.25, 34.5)  # Include the top-left corner of the custom grid
 top.right <- list(-117.75, 34.5) # Include the top-right corner of the custom grid
 width     <- 1              # Include the desired width of the custom grid
+
+receptor.resolution <- 0.02 # Set the spacing of column-receptors on the custom grid (deg)
+interpolation.resolution <- 2 # Set the size of interpolated subdomains (int >= 2)
+
 timestamp <- c(
   '20190726-205900'
 ) # Include timestamps in the format 'YYYYMMDD-HHMMSS'
@@ -101,6 +105,8 @@ input.variables <- data.frame(
   top.left = paste(as.character(top.left), collapse = ','),
   top.right = paste(as.character(top.right), collapse = ','), 
   width = width,
+  receptor.resolution = receptor.resolution,
+  interpolation.resolution = interpolation.resolution,
   timestamp = timestamp,
   run_trajec = run_trajec,
   run_foot = run_foot,
