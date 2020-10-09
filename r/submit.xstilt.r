@@ -42,7 +42,7 @@ submit.xstilt <- function(input.variables = NULL, user.id = NULL) {
       
       # Submit the job (interpolation)
       run_xstilt_UrBAnFlux_2(input.variables = input.variables[i,])
-      message(paste0('Job ', i, ' of ', nrow(input.variables), ' submitted.'))
+      message(paste0('Custom domain job ', i, ' of ', nrow(input.variables), ' submitted.'))
     }
     
     # Start interpolation scheme here
