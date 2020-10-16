@@ -149,8 +149,8 @@ run_xstilt_UrBAnFlux_2 <- function(input.variables = NULL) {
   # ourput directory for storing traj with default convention;
   # store traj with wind err in a separate directory if run_hor_err = T
  
-  timestr<- strftime(as.POSIXct(timestamp, format = '%Y%m%d-%H%M%S', tz = 'UTC'),
-                        format = '%Y%m%d%H%M', tz = 'UTC')
+  timestr<- strftime(as.POSIXct(input.variables$timestamp, format = '%Y%m%d-%H%M%S',
+                                tz = 'UTC'), format = '%Y%m%d%H%M', tz = 'UTC')
   outdir <- file.path(store.path,
                       paste('out', gsub(' ', '', site),
                             timestr, met, oco.sensor, sep = '_'))
@@ -347,7 +347,7 @@ run_xstilt_UrBAnFlux_2 <- function(input.variables = NULL) {
 
     # call run.xstilt() to start running trajec and foot
     run.xstilt(namelist)  # see more variables defined in run.xstilt()
-    q('no')
+    return('Submitted job.')
   } # end if run trajec or foot
   
   

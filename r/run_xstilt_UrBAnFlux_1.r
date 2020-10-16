@@ -390,7 +390,7 @@ run_xstilt_UrBAnFlux_1 <- function(input.variables = NULL) {
 
     # call run.xstilt() to start running trajec and foot
     run.xstilt(namelist)  # see more variables defined in run.xstilt()
-    q('no')
+    return('Submitted job.')
   } # end if run trajec or foot
   
   
