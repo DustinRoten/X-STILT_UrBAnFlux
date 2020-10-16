@@ -1,6 +1,6 @@
 options(stringsAsFactors = FALSE)
 setwd('/uufs/chpc.utah.edu/common/home/u1211790/X-STILT_UrBAnFlux')
-source('r/dependencies.r')
+source('r/dependencies.r'); library(Hmisc)
 
 user.id <- 'u1211790'
 homedir <- '/uufs/chpc.utah.edu/common/home/u1211790'
@@ -14,7 +14,7 @@ odiac.vname <- c('2016', '2017', '2018', '2019')[4] # ODIAC version
  
 project <- oco.sensor   # name your project
 
-store.path <- '/uufs/chpc.utah.edu/common/home/lin-group11/TEST'
+store.path <- '/uufs/chpc.utah.edu/common/home/lin-group11/XCO2_Climatology'
 
 #####
 ### setting up the OCO sounding search grid
@@ -26,16 +26,27 @@ timestr <- c(
 
 ### setting up the custom X-STILT grid
 ### These variables will be ignored if 'Modeled' is not selected
-top.left  <- list(-118.25, 34.5)  # Include the top-left corner of the custom grid
-top.right <- list(-117.75, 34.5) # Include the top-right corner of the custom grid
-width     <- 1              # Include the desired width of the custom grid
+top.left  <- list(-118.62, 34.5)  # Include the top-left corner of the custom grid
+top.right <- list(-117.53, 33.94) # Include the top-right corner of the custom grid
+width     <- 0.6              # Include the desired width of the custom grid
 
 receptor.resolution <- 0.02 # Set the spacing of column-receptors on the custom grid (deg)
 interpolation.resolution <- 2 # Set the size of interpolated subdomains (int >= 2)
 
-timestamp <- c(
-  '20190726-205900'
-) # Include timestamps in the format 'YYYYMMDD-HHMMSS'
+#Input timestamps in local time
+#Pacific time = 'America/Los_Angeles"
+time.zone <- 'America/Los_Angeles'
+
+#List the days and times here
+timestamp <- c('20200603-070000',
+               '20200603-100000',
+               '20200603-130000',
+               '20200603-160000',
+               '20200603-190000')
+
+#Convert the times to UTC format
+time <- as.POSIXlt(timestamp, tz = time.zone, format = '%Y%m%d-%H%M%S')
+time <- lubridate::with_tz(time, tzone = 'UTC')
 #####
 
 # select what type of analysis is performed
@@ -78,62 +89,28 @@ overwrite_wgttraj <- T
 ### 3) other footprint parameters using STILTv2 (Fasoli et al., 2018)
 hnf_plume      <- T  # whether turn on hyper near-field (HNP) for mising hgts
 smooth_factor  <- 1  # Gaussian smooth factor, 0 to disable
-time_integrate <- T  # whether integrate footprint along time, T, no hourly foot
+time_integrate <- F  # whether integrate footprint along time, T, no hourly foot
 projection     <- '+proj=longlat'
 
 ## use SLURM for parallel simulation settings
 # time allowed for running hymodelc before forced terminations
-n_nodes  <- 5
+n_nodes  <- 6
 n_cores  <- 8
 timeout  <- 4 * 60 * 60  # in sec
 job.time <- '04:00:00'    # total job time
 #########################################################################################
-input.variables <- data.frame(
-  homedir = homedir,
-  site = site,
-  input.path = input.path,
-  oco.sensor = oco.sensor,
-  data.level = data.level,
-  oco.ver = oco.ver,
-  odiac.vname = odiac.vname,
-  project = oco.sensor,
-  store.path = store.path,
-  urbanTF = urbanTF,
-  dlon.urban = dlon.urban,
-  dlat.urban = dlat.urban,
-  timestr = timestr,
-  top.left = paste(as.character(top.left), collapse = ','),
-  top.right = paste(as.character(top.right), collapse = ','), 
-  width = width,
-  receptor.resolution = receptor.resolution,
-  interpolation.resolution = interpolation.resolution,
-  timestamp = timestamp,
-  run_trajec = run_trajec,
-  run_foot = run_foot,
-  columnTF = columnTF,
-  run_hor_err = run_hor_err,
-  run_ver_err = run_ver_err,
-  run_emiss_err = run_emiss_err,
-  run_sim = run_sim,
-  delt = delt,
-  nhrs = nhrs,
-  met = met,
-  met_path = met_path,
-  met_file_format = met_file_format,
-  n_met_min = n_met_min,
-  selTF = selTF,
-  limit_recp = limit_recp,
-  foot.res = foot.res,
-  ak.wgt  = ak.wgt,
-  pwf.wgt = pwf.wgt,
-  overwrite_wgttraj = overwrite_wgttraj,
-  hnf_plume = hnf_plume,
-  smooth_factor = smooth_factor,
-  time_integrate = time_integrate,
-  projection = projection,
-  n_nodes = n_nodes,
-  n_cores = n_cores,
-  timeout = timeout,
-  job.time = job.time)
+input.variables <- data.frame(homedir = homedir, site = site, input.path = input.path,
+  oco.sensor = oco.sensor, data.level = data.level, oco.ver = oco.ver, odiac.vname = odiac.vname,
+  project = oco.sensor, store.path = store.path, urbanTF = urbanTF, dlon.urban = dlon.urban,
+  dlat.urban = dlat.urban, timestr = timestr, top.left = paste(as.character(top.left), collapse = ','),
+  top.right = paste(as.character(top.right), collapse = ','), width = width,
+  receptor.resolution = receptor.resolution, interpolation.resolution = interpolation.resolution,
+  timestamp = timestamp, run_trajec = run_trajec, run_foot = run_foot, columnTF = columnTF,
+  run_hor_err = run_hor_err, run_ver_err = run_ver_err, run_emiss_err = run_emiss_err,
+  run_sim = run_sim, delt = delt, nhrs = nhrs, met = met, met_path = met_path,
+  met_file_format = met_file_format, n_met_min = n_met_min, selTF = selTF, limit_recp = limit_recp,
+  foot.res = foot.res, ak.wgt  = ak.wgt, pwf.wgt = pwf.wgt, overwrite_wgttraj = overwrite_wgttraj,
+  hnf_plume = hnf_plume, smooth_factor = smooth_factor, time_integrate = time_integrate,
+  projection = projection, n_nodes = n_nodes, n_cores = n_cores, timeout = timeout, job.time = job.time)
 
 submit.xstilt(input.variables, user.id)
