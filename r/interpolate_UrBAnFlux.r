@@ -91,11 +91,23 @@ interpolate_UrBAnFlux <- function(input.variables = NULL) {
                                            interpolated.receptors$lati[k],
                                            'X', sep = '_'))
           
-          # interpolate the missing footprint and save in the appropriate directory
-          interpolate.footprint(xstilt.receptors,
-                                interpolated.receptor = interpolated.receptors[k,],
-                                receptor.resolution, output.directory = outdir,
-                                footprint.directory = new.directory)
+          if(input.variables$time_integrate == TRUE) {
+            # interpolate the TIME-INTEGRATED missing footprint
+            # save in the appropriate directory
+            interpolate.footprint_1(xstilt.receptors,
+                                    time_integrate = input.variables$time_integrate,
+                                    interpolated.receptor = interpolated.receptors[k,],
+                                    receptor.resolution, output.directory = outdir,
+                                    footprint.directory = new.directory)
+          } else if(input.variables$time_integrate == FALSE) {
+            # interpolate the NON-TIME-INTEGRATED missing footprint
+            # save in the appropriate directoy
+            interpolate.footprint_2(xstilt.receptors,
+                                    time_integrate = input.variables$time_integrate,
+                                    interpolated.receptor = interpolated.receptors[k,],
+                                    receptor.resolution, output.directory = outdir,
+                                    footprint.directory = new.directory)
+          }
           
           #' Add this column-receptor to the list of interpolated receptors.
           #' Receptors on this list will not be interpolated again.
@@ -103,8 +115,6 @@ interpolate_UrBAnFlux <- function(input.variables = NULL) {
             rbind(completed.interpolations, interpolated.receptors[k,])
         } else {} # close the conditional interpolation statement here
       } # close the interpolation method for a subdomain
-      
-      
       
     } #close j for loop
   } #close i for loop
