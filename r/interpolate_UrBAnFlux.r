@@ -1,14 +1,18 @@
-interpolate_UrBAnFlux <- function(input.variables = NULL) {
+interpolate_UrBAnFlux <- function(homedir = NULL,
+                                  site = NULL,
+                                  timestamp = NULL,
+                                  store.path = NULL,
+                                  met = NULL,
+                                  oco.sensor = NULL,
+                                  time_integrate = NULL,
+                                  receptor.resolution = NULL) {
   
   # load the required libraries
   library(stringr); library(dplyr)
   library(raster); library(geosphere)
   
-  # require the timestamp, store.path, met, and oco.sensor
-  timestamp <- input.variables$timestamp
-  store.path <- input.variables$store.path
-  met <- input.variables$met
-  oco.sensor <- input.variables$oco.sensor
+  setwd(file.path(homedir, 'X-STILT_UrBAnFlux'))
+  source('r/dependencies.r')
   
   # convert the timestamp into a "traditional" timestr variable.
   timestr<- strftime(as.POSIXct(timestamp, format = '%Y%m%d-%H%M%S', tz = 'UTC'),
@@ -17,7 +21,8 @@ interpolate_UrBAnFlux <- function(input.variables = NULL) {
   # construct the output directory and check that it exists.
   outdir <- file.path(store.path,
                       paste('out', gsub(' ', '', site),
-                            timestr, met, oco.sensor, sep = '_'))
+                            timestr, met, 'Modeled', sep = '_'))
+  
   if(!dir.exists(outdir)) {message('Footprint directory not found.'); return(NULL)}
   
   # Grab the grid data generated from by the initial x-stilt run.
@@ -91,19 +96,19 @@ interpolate_UrBAnFlux <- function(input.variables = NULL) {
                                            interpolated.receptors$lati[k],
                                            'X', sep = '_'))
           
-          if(input.variables$time_integrate == TRUE) {
+          if(time_integrate == TRUE) {
             # interpolate the TIME-INTEGRATED missing footprint
             # save in the appropriate directory
             interpolate.footprint_1(xstilt.receptors,
-                                    time_integrate = input.variables$time_integrate,
+                                    time_integrate,
                                     interpolated.receptor = interpolated.receptors[k,],
                                     receptor.resolution, output.directory = outdir,
                                     footprint.directory = new.directory)
-          } else if(input.variables$time_integrate == FALSE) {
+          } else if(time_integrate == FALSE) {
             # interpolate the NON-TIME-INTEGRATED missing footprint
             # save in the appropriate directoy
             interpolate.footprint_2(xstilt.receptors,
-                                    time_integrate = input.variables$time_integrate,
+                                    time_integrate,
                                     interpolated.receptor = interpolated.receptors[k,],
                                     receptor.resolution, output.directory = outdir,
                                     footprint.directory = new.directory)
