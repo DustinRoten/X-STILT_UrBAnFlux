@@ -91,7 +91,7 @@ run_xstilt_UrBAnFlux_2 <- function(input.variables = NULL) {
   ### 1) input dlat, dlon to get spatial domain around city center
   #site <- 'Riyadh'   # choose a city
   site <- input.variables$site
-  lon.lat <- get.lon.lat(site = site, dlon = 1, dlat = 1.5)
+  lon.lat <- suppressWarnings(get.lon.lat(site = site, dlon = 1, dlat = 1.5))
   
   ### 2) required paths for input datasets
   # e.g., OCO-2/3 XCO2, SIF, NOAA RAOB, ODAIC emission (1km tiff files)
@@ -329,20 +329,22 @@ run_xstilt_UrBAnFlux_2 <- function(input.variables = NULL) {
                      ctflux.path = ctflux.path, ctmole.path = ctmole.path, 
                      delt = delt, emiss.file = emiss.file, foot.info = foot.info, 
                      hnf_plume = hnf_plume, hor.err = hor.err, jobname = jobname,
-                     met = met, met_file_format = met_file_format, n_met_min = n_met_min,
-                     met_subgrid_buffer = met_subgrid_buffer, 
-                     met_subgrid_enable = met_subgrid_enable,
-                     met_subgrid_levels = met_subgrid_levels,
-                     met_path = met_path, nhrs = nhrs, n_cores = n_cores,
-                     n_nodes = n_nodes, numpar = numpar, outdir = outdir, 
-                     oco.path = NA, overwrite_wgttraj = overwrite_wgttraj,
-                     pbl.err = pbl.err, project = project, projection = projection,
-                     pwf.wgt = pwf.wgt, recp.info = recp.info, run_foot = run_foot, 
+                     met = met, met_file_format = met_file_format, 
+                     met_path = met_path, met_subgrid_buffer = met_subgrid_buffer, 
+                     met_subgrid_enable = met_subgrid_enable, 
+                     met_subgrid_levels = met_subgrid_levels, nhrs = nhrs, 
+                     n_cores = n_cores, n_met_min = n_met_min, n_nodes = n_nodes, 
+                     numpar = numpar, outdir = outdir, oco.path = NA, 
+                     overwrite_wgttraj = overwrite_wgttraj, pbl.err = pbl.err, 
+                     project = project, projection = projection, pwf.wgt = pwf.wgt, 
+                     recp.info = recp.info, run_foot = run_foot, 
                      run_hor_err = run_hor_err, run_trajec = run_trajec, 
                      slurm = slurm, slurm_options = slurm_options, 
                      smooth_factor = smooth_factor, time_integrate = time_integrate, 
-                     timeout = timeout, tropomi.speci = NA, tropomi.path = NA,
-                     varstrajec = varstrajec, xstilt_wd = xstilt_wd)        
+                     timeout = timeout, tropomi.speci = NA, 
+                     tropomi.path = NA, varstrajec = varstrajec, 
+                     xstilt_wd = xstilt_wd) 
+    
     cat('Done with creating namelist...\n')
 
     # call run.xstilt() to start running trajec and foot
