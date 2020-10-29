@@ -1,13 +1,12 @@
-options(stringsAsFactors = FALSE)
-setwd('/uufs/chpc.utah.edu/common/home/u1211790/X-STILT_UrBAnFlux')
-source('r/dependencies.r'); library(Hmisc)
-
 user.id <- 'u1211790'
 homedir <- '/uufs/chpc.utah.edu/common/home/u1211790'
-site <- 'Los Angeles'
+setwd(file.path(homedir, 'X-STILT_UrBAnFlux'))
+source('r/dependencies.r')
+options(stringsAsFactors = FALSE)
 
+site <- 'Los Angeles'
 input.path  <- '/uufs/chpc.utah.edu/common/home/lin-group7/group_data'
-oco.sensor  <- c('OCO-2', 'OCO-3', 'Modeled')[3]
+oco.sensor  <- c('OCO-2', 'OCO-3', 'Modeled', 'Interpolate')[3]
 data.level <- c('L1', 'L2')[2]
 oco.ver     <- c('b7rb', 'b8r', 'b9r', 'VEarlyR')[3] # retrieval algo ver
 odiac.vname <- c('2016', '2017', '2018', '2019')[4] # ODIAC version
@@ -16,7 +15,6 @@ project <- oco.sensor   # name your project
 
 store.path <- '/uufs/chpc.utah.edu/common/home/lin-group11/XCO2_Climatology'
 
-#####
 ### setting up the OCO sounding search grid
 ### These variables will be ignored if 'OCO-2/OCO-3' is not selected
 urbanTF <- T; dlon.urban <- 0.5; dlat.urban <- 0.5
@@ -63,7 +61,7 @@ run_ver_err   <- F  # T: set error parameters in STEP 4
 run_emiss_err <- F  # T: get XCO2 error due to prior emiss err, see STEP 4 and 8
 run_sim       <- F  # T: do analysis with existing trajec/foot, see STEP 8
 delt <- 2           # fixed timestep [min]; set = 0 for dynamic timestep
-nhrs <- -24         # number of hours backward (-) or forward (+)
+nhrs <- -12         # number of hours backward (-) or forward (+)
 
 # path for the ARL format of meteo fields
 # simulation_step() will find corresponding files
@@ -96,13 +94,17 @@ projection     <- '+proj=longlat'
 # time allowed for running hymodelc before forced terminations
 n_nodes  <- 6
 n_cores  <- 8
-timeout  <- 4 * 60 * 60  # in sec
-job.time <- '04:00:00'    # total job time
+timeout  <-  6 * 60 * 60  # in sec
+job.time <- '06:00:00'    # total job time
+account = 'lin-kp'
+partition = 'lin-kp'
+
 #########################################################################################
-input.variables <- data.frame(homedir = homedir, site = site, input.path = input.path,
-  oco.sensor = oco.sensor, data.level = data.level, oco.ver = oco.ver, odiac.vname = odiac.vname,
-  project = oco.sensor, store.path = store.path, urbanTF = urbanTF, dlon.urban = dlon.urban,
-  dlat.urban = dlat.urban, timestr = timestr, top.left = paste(as.character(top.left), collapse = ','),
+input.variables <- data.frame(user.id = user.id, account = account, partition = partition,
+  homedir = homedir, site = site, input.path = input.path, oco.sensor = oco.sensor,
+  data.level = data.level, oco.ver = oco.ver, odiac.vname = odiac.vname, project = oco.sensor,
+  store.path = store.path, urbanTF = urbanTF, dlon.urban = dlon.urban, dlat.urban = dlat.urban,
+  timestr = timestr, top.left = paste(as.character(top.left), collapse = ','),
   top.right = paste(as.character(top.right), collapse = ','), width = width,
   receptor.resolution = receptor.resolution, interpolation.resolution = interpolation.resolution,
   timestamp = timestamp, run_trajec = run_trajec, run_foot = run_foot, columnTF = columnTF,
@@ -113,4 +115,4 @@ input.variables <- data.frame(homedir = homedir, site = site, input.path = input
   hnf_plume = hnf_plume, smooth_factor = smooth_factor, time_integrate = time_integrate,
   projection = projection, n_nodes = n_nodes, n_cores = n_cores, timeout = timeout, job.time = job.time)
 
-submit.xstilt(input.variables, user.id)
+submit.xstilt(input.variables)
