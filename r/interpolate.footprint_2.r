@@ -39,27 +39,27 @@ interpolate.footprint_2 <- function(xstilt.receptors = NULL, interpolated.recept
       eval(parse(text = paste0('foot.', i, ' <- footprint')))
     }
     
-    #Find the lowest number of layers among the xstilt footprints
-    nlayers <- min(c(nlayers(foot.1), nlayers(foot.2)))
-    interpolated.footprint <- raster() #Create an empty raster to store layers
-    for(layer in 1:nlayers) {
-      # Add the two footprints together. Suppress warnings about the intersection of the footprints.
-      interpolated.layer <-
-        suppressWarnings((1/sum(distance.list))*
-                           (distance.list[1]*foot.1[[layer]] + distance.list[2]*foot.2[[layer]]))
-      
-      interpolated.footprint <- addLayer(interpolated.footprint, interpolated.layer)
-    }; names(interpolated.footprint) <- names(foot.1)[1:nlayers]
+    #Find the highest number of layers among the xstilt footprints
+    layer.names_max <- which.max(c(nlayers(foot.1), nlayers(foot.2)))
     
-    # Snap the interpolated footprint to the common grid.
-    interpolated.footprint <- resample(interpolated.footprint, foot.1, method = 'ngb')
+    #' Interpolate the missing footprint here. Assign the layer names
+    #' from a complete x-stilt generated footprint.
+    interpolated.footprint <-
+      suppressWarnings((sum(1/(1+distance.list^2))^-1)*
+                         ((1/(1+distance.list[1]^2))*foot.1 +
+                            (1/(1+distance.list[2]^2))*foot.2))
+    eval(parse(text = paste0('names(interpolated.footprint) <- names(foot.',
+                             layer.names_max, ')')))
     
-    # create the directory and save the footprint file (*.nc) in it
+    # create the interpolated footprint's directory and create its filename
     suppressWarnings(dir.create(footprint.directory, recursive = TRUE))
     output.filename <- file.path(footprint.directory,
                                  paste0(basename(footprint.directory), '_foot.nc'))
-    writeRaster(interpolated.footprint, filename = output.filename,
-                format = 'CDF', overwrite = TRUE)
+    if(file.exists(output.filename)) file.remove(output.filename)
+    
+    # Snap the interpolated footprint to the common grid.
+    resampled.footprint <- resample(interpolated.footprint, foot.1,
+                                    method = 'ngb', filename = output.filename)
     
     # add a symbolic link in the "footprints" folder for easy access
     # Symlink footprint to out/footprints
@@ -95,28 +95,28 @@ interpolate.footprint_2 <- function(xstilt.receptors = NULL, interpolated.recept
       eval(parse(text = paste0('foot.', i, ' <- footprint')))
     }
     
-    #Find the lowest number of layers among the xstilt footprints
-    nlayers <- min(c(nlayers(foot.1), nlayers(foot.2), nlayers(foot.3), nlayers(foot.4)))
-    interpolated.footprint <- raster() #Create an empty raster to store layers
-    for(layer in 1:nlayers) {
-      # Add the four footprints together. Suppress warnings about the intersection of the footprints.
-      interpolated.layer <-
-        suppressWarnings((1/sum(distance.list))*
-                           (distance.list[1]*foot.1[[layer]] + distance.list[2]*foot.2[[layer]] +
-                              distance.list[3]*foot.3[[layer]] + distance.list[4]*foot.4[[layer]]))
-      
-      interpolated.footprint <- addLayer(interpolated.footprint, interpolated.layer)
-      
-    }; names(interpolated.footprint) <- names(foot.1)[1:nlayers]
+    #Find the highest number of layers among the xstilt footprints
+    layer.names_max <- which.max(c(nlayers(foot.1), nlayers(foot.2)))
     
-    # Snap the interpolated footprint to the common grid.
-    interpolated.footprint <- resample(interpolated.footprint, foot.1, method = 'ngb')
+    interpolated.layer <-
+      suppressWarnings((sum(1/(1+distance.list^2))^-1)*
+                         ((1/(1+distance.list[1]^2))*foot.1 +
+                          (1/(1+distance.list[2]^2))*foot.2 +
+                          (1/(1+distance.list[3]^2))*foot.3 +
+                          (1/(1+distance.list[4]^2))*foot.4))
+    eval(parse(text = paste0('names(interpolated.footprint) <- names(foot.',
+                             layer.names_max, ')')))
     
-    # create the directory and save the footprint file (*.nc) in it
-    dir.create(footprint.directory, recursive = TRUE)
+    
+    # create the interpolated footprint's directory and create its filename
+    suppressWarnings(dir.create(footprint.directory, recursive = TRUE))
     output.filename <- file.path(footprint.directory,
                                  paste0(basename(footprint.directory), '_foot.nc'))
-    writeRaster(interpolated.footprint, filename = output.filename, format = 'CDF')
+    if(file.exists(output.filename)) file.remove(output.filename)
+    
+    # Snap the interpolated footprint to the common grid.
+    resampled.foot <- resample(interpolated.footprint, foot.1,
+                               method = 'ngb', filename = output.filename)
     
     # add a symbolic link in the "footprints" folder for easy access
     # Symlink footprint to out/footprints
