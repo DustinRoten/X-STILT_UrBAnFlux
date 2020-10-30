@@ -6,7 +6,7 @@ options(stringsAsFactors = FALSE)
 
 site <- 'Los Angeles'
 input.path  <- '/uufs/chpc.utah.edu/common/home/lin-group7/group_data'
-oco.sensor  <- c('OCO-2', 'OCO-3', 'Modeled', 'Interpolate')[3]
+oco.sensor  <- c('OCO-2', 'OCO-3', 'Modeled', 'Interpolate')[4]
 data.level <- c('L1', 'L2')[2]
 oco.ver     <- c('b7rb', 'b8r', 'b9r', 'VEarlyR')[3] # retrieval algo ver
 odiac.vname <- c('2016', '2017', '2018', '2019')[4] # ODIAC version
