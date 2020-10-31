@@ -87,15 +87,15 @@ interpolate.footprint_2 <- function(xstilt.receptors = NULL, interpolated.recept
     if(file.exists(output.filename)) file.remove(output.filename)
     
     # Snap the interpolated footprint to the common grid.
-    resampled.footprint <- resample(interpolated.footprint, foot.1,
-                                    method = 'ngb', filename = output.filename)
+    interpolated.footprint <- resample(interpolated.footprint, foot.1,
+                                       method = 'ngb', filename = output.filename)
     
     #' The current process needs to be replaced with something more clever.
     #' The previous line saves the appropriate file in the appropriate location.
     #' This keeps the resample function from storing tmp files and taking up too
     #' much memory; however, the layer names (timestamps) are not saved *rolls eyes*
     #' Therefore, the raster is read back into memory and then removed.
-    interpolated.footprint <- raster::readAll(output.filename); file.remove(output.filename)
+    #interpolated.footprint <- raster::readAll(output.filename); file.remove(output.filename)
     
     # Now, the file is saved properly in a format similar to the other footprints.
     write_interp.footprint(footprint.raster = interpolated.footprint, output.filename)
@@ -201,15 +201,15 @@ interpolate.footprint_2 <- function(xstilt.receptors = NULL, interpolated.recept
     if(file.exists(output.filename)) file.remove(output.filename)
     
     # Snap the interpolated footprint to the common grid.
-    resampled.foot <- resample(interpolated.footprint, foot.1,
-                               method = 'ngb', filename = output.filename)
+    interpolated.footprint <- resample(interpolated.footprint, foot.1,
+                                       method = 'ngb', filename = output.filename)
     
     #' The current process needs to be replaced with something more clever.
     #' The previous line saves the appropriate file in the appropriate location.
     #' This keeps the resample function from storing tmp files and taking up too
     #' much memory; however, the layer names (timestamps) are not saved *rolls eyes*
     #' Therefore, the raster is read back into memory and then removed.
-    interpolated.footprint <- raster::readAll(output.filename); file.remove(output.filename)
+    #interpolated.footprint <- raster::readAll(output.filename); file.remove(output.filename)
     
     # Now, the file is saved properly in a format similar to the other footprints.
     write_interp.footprint(footprint.raster = interpolated.footprint, output.filename)
