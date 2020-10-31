@@ -4,3 +4,6 @@ rsc <- dir('r', pattern = '.*\\.r$',
 rsc <- subset(rsc, rsc != 'r/dependencies.r')
 
 invisible(lapply(rsc, source))
+
+# required STILT functions
+source('X-STILT/stilt_hysplit/r/src/write_footprint.r')
