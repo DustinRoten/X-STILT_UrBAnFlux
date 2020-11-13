@@ -5,5 +5,9 @@ rsc <- subset(rsc, rsc != 'r/dependencies.r')
 
 invisible(lapply(rsc, source))
 
+# Other relevant packages
+library(geosphere); library(raster); library(dplyr)
+library(ncdf4)
+
 # required STILT functions
 source('X-STILT/stilt_hysplit/r/src/write_footprint.r')
