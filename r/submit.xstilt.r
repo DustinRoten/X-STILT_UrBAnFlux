@@ -27,7 +27,7 @@ submit.xstilt <- function(input.variables = NULL) {
         
         # Wait for other jobs to complete
         SLURM.wait(selected.partition = input.variables$partition[i],
-                   user.id = input.variables$user.id)
+                   user.id = input.variables$user.id[i])
         
         # Submit the job (interpolation)
         run_xstilt_UrBAnFlux_2(input.variables = input.variables[i,])
@@ -42,12 +42,21 @@ submit.xstilt <- function(input.variables = NULL) {
       # One final check after the runs are complete. Unused files are removed.
       # Wait for other jobs to complete
       SLURM.wait(selected.partition = input.variables$partition[i],
-                 user.id = input.variables$user.id)
+                 user.id = input.variables$user.id[i])
       purge.directories(directory = input.variables$store.path, iteration = 0)
       
-    } #closes if statement for interpolation
-
-    interpolate_apply(f = interpolate_UrBAnFlux, input.variables)
+    } #closes if statement for modeled
     
-  }
+    for(i in 1:nrow(input.variables)) {
+
+      # Wait for other jobs to complete
+      SLURM.wait(selected.partition = input.variables$partition[i],
+                 user.id = input.variables$user.id[i])
+      
+      interpolate_UrBAnFlux(input.variables = input.variables[i,])
+      message(paste0('Interpolation job ', i, ' of ', nrow(input.variables), ' submitted.'))
+      
+    }
+    
+  }; message('Submissions complete!')
 }
