@@ -92,7 +92,7 @@ projection     <- '+proj=longlat'
 
 ## use SLURM for parallel simulation settings
 # time allowed for running hymodelc before forced terminations
-n_nodes  <- 6
+n_nodes  <- 5
 n_cores  <- 8
 timeout  <-  6 * 60 * 60  # in sec
 job.time <- '06:00:00'    # total job time
