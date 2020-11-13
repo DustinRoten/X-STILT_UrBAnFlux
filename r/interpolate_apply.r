@@ -1,4 +1,4 @@
-interpolate_apply <- function(f, input.variables = NULL) {
+interpolate_apply <- function(input.variables = NULL, slurm.submit = NULL) {
   
   # Expand arguments to form a data frame where rows serve as iterations of FUN
   # using named columns as arguments to FUN. Base R's data.frame class expands
@@ -9,45 +9,29 @@ interpolate_apply <- function(f, input.variables = NULL) {
                         account = unique(input.variables$account),
                         partition = unique(input.variables$partition))
   
-  if (nrow(input.variables) > 1) {
-    # Confirm availability of sbatch executable and dispatch simulation
-    # configurations to SLURM
-    sbatch_avail <- system('which sbatch', intern = T)
-    if (length(sbatch_avail) == 0 || nchar(sbatch_avail[1]) == 0)
-      stop('Problem identifying sbatch executable for slurm...')
+  # Confirm availability of sbatch executable and dispatch simulation
+  # configurations to SLURM
+  sbatch_avail <- system('which sbatch', intern = T)
+  if (length(sbatch_avail) == 0 || nchar(sbatch_avail[1]) == 0)
+    stop('Problem identifying sbatch executable for slurm...')
+  
+  message('Multi node parallelization using slurm. Dispatching jobs...')
+  #load_libs('rslurm')
+  library(rslurm)
+  
+  if(input.variables$time_integrate == TRUE) {
     
-    message('Multi node parallelization using slurm. Dispatching jobs...')
-    #load_libs('rslurm')
-    library(rslurm)
+    stop('Time-integrated interpolation not yet working.')
     
-    #Build a dataframe that only contains the relevant variables for interpolation.
-    subset.input.variables <- data.frame(homedir = input.variables$homedir,
-                                         site = input.variables$site,
-                                         timestamp = input.variables$timestamp,
-                                         store.path = input.variables$store.path,
-                                         met = input.variables$met,
-                                         oco.sensor = input.variables$oco.sensor,
-                                         time_integrate = input.variables$time_integrate,
-                                         receptor.resolution = input.variables$receptor.resolution)
+  } else if(input.variables$time_integrate == FALSE) {
     
-    if(length(unique(input.variables$oco.sensor)) > 1) stop('Multiple modes submitted')
-    sjob <- rslurm::slurm_apply(f,
-                                subset.input.variables,
-                                jobname = unique(input.variables$oco.sensor),
+    sjob <- rslurm::slurm_apply(f = interpolate.footprint_2,
+                                slurm.submit,
+                                jobname = 'Interpolating',
                                 pkgs = 'base',
-                                nodes = max(input.variables$n_nodes),
-                                cpus_per_node = max(input.variables$n_cores),
+                                nodes = input.variables$n_nodes,
+                                cpus_per_node = input.variables$n_cores,
                                 slurm_options = slurm_options)
     return(invisible(sjob))
-  } else {
-    interpolate_UrBAnFlux(input.variables$homedir,
-                          input.variables$site,
-                          input.variables$timestamp,
-                          input.variables$store.path,
-                          input.variables$met,
-                          input.variables$oco.sensor,
-                          input.variables$time_integrate,
-                          input.variables$receptor.resolution)
   }
-
 }
