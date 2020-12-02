@@ -50,8 +50,11 @@ weighted.edgar.sector <- function(citylon = NULL, citylat = NULL,
   
   # as.POSIXlt iterates Sun thru Sat as 0 thrus 6. Sun must become 7 for EDGAR
   POSIX.format <- as.POSIXlt(time, format = '%Y.%m.%d.%H.%M.%S', tz = 'UTC')
-  Weekday_id <- POSIX.format$wday; if(Weekday_id == 0) {Weekday_id <- 7}
   
+  # Insert UTC offset here
+  
+  Weekday_id <- POSIX.format$wday; if(Weekday_id == 0) {Weekday_id <- 7}
+
   # Monthly profiles are not currently provided for EDGAR v5.
   # A simple division by 12 is used for now.
   MONTHLY_FACTOR <- 1/12

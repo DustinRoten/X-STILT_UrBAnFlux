@@ -138,30 +138,54 @@ convolve.FullFlux <- function(site = NULL, citylon = NULL, citylat = NULL,
   
     
   # Step through the list of times/layers and average them across all footprints.
-  for(i in 1:length(footprint.list)) {
+  # The dreaded triple nested for loop... Buckle up!
+  
+  # First, we will begin with a particular EDGAR sector
+  for(i in 1:length(Available.Sector.List)) {
     
-    for(j in 1:length(layer.names)) {
+    # Ultimately, we need to convolve each footprint with
+    # a weighted ODIAC sector.
+    for(j in 1:length(footprint.list)) {
       
-      footprint <- stack(footprint.list[i])
+      footprint <- stack(footprint.list[j])
       footprint <- crop(footprint, new.extent)
       
-      tryCatch({
-        eval(parse(text = paste0('footprint.layer <- footprint$', layer.names[j])))
-      }, error = function(err){
-        r <- raster(); extent(r) <- extent(footprint); res(r) <- res(footprint)
-        values(r) <- 0; footprint.layer <- r; names(footprint.layer) <- layer.names[j]
-      }, finally = {})
+      # Each hourly layer of each footprint will change the
+      # weighting of the EDGAR footprint.
+      for(k in 1:length(layer.names)) {
+        
+        tryCatch({
+          eval(parse(text = paste0('footprint.layer <- footprint$', layer.names[k])))
+        }, error = function(err){
+          r <- raster(); extent(r) <- extent(footprint); res(r) <- res(footprint)
+          values(r) <- 0; footprint.layer <- r; names(footprint.layer) <- layer.names[k]
+        }, finally = {})
+        
+        # Aquire the weighted EDGAR sector here
+        # Resample the sector at ODIAC resolution
+        edgar.sector <- 
+          weighted.edgar.sector(citylon = citylon, citylat = citylat,
+                                sector.name = Available.Sector.List[i],
+                                edgar.dir = edgar.dir,
+                                time = gsub('X', '', layer.names[k]),
+                                temporal.downscaling.files = temp.dir,
+                                nc.extent = extent(footprint))
+        edgar.sector <- resample(edgar.sector, ODIAC)
+        edgar.sector[edgar.sector < 0] <- 0
+        
+        if(j == 1) {summed.layers <- footprint.layer}
+        if(j > 1) {summed.layers <- summed.layers + footprint.layer}
+        
+      } # close the layer loop
       
-      if(j == 1) {summed.layers <- footprint.layer}
-      if(j > 1) {summed.layers <- summed.layers + footprint.layer}
+      avg.layer <- summed.layers/length(footprint.list)
+      names(avg.layer) <- layer.names[i]
       
-    }
-    avg.layer <- summed.layers/length(footprint.list)
-    names(avg.layer) <- layer.names[i]
+      if(i == 1) {regional.footprint <- avg.layer}
+      if(i > 1) {regional.footprint <- addLayer(regional.footprint, avg.layer)}
+      
+    } # close the footprint list loop
     
-    if(i == 1) {regional.footprint <- avg.layer}
-    if(i > 1) {regional.footprint <- addLayer(regional.footprint, avg.layer)}
-    
-  }
+  } # close the sector loop
   
 } # close function
