@@ -343,12 +343,12 @@ run_xstilt_UrBAnFlux_2 <- function(input.variables = NULL) {
                      smooth_factor = smooth_factor, time_integrate = time_integrate, 
                      timeout = timeout, tropomi.speci = NA, 
                      tropomi.path = NA, varstrajec = varstrajec, 
-                     xstilt_wd = xstilt_wd) 
+                     xstilt_wd = xstilt_wd)
     
     cat('Done with creating namelist...\n')
 
     # call run.xstilt() to start running trajec and foot
-    run.xstilt(namelist)  # see more variables defined in run.xstilt()
+    config_xstilt(namelist)  # see more variables defined in run.xstilt()
     return('Submitted job.')
   } # end if run trajec or foot
   
