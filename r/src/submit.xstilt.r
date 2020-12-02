@@ -30,8 +30,9 @@ submit.xstilt <- function(input.variables = NULL) {
                    user.id = input.variables$user.id[i])
 
         # Submit the job (interpolation)
-        run_xstilt_UrBAnFlux_2(input.variables = input.variables[i,])
+        run_xstilt_UrBAnFlux_modeled(input.variables = input.variables[i,])
         message(paste0('Custom domain job ', i, ' of ', nrow(input.variables), ' submitted.'))
+        Sys.sleep(60)
         
         #' To save space, remove the unwanted files from the previous directory
         if(i > 1) {purge.directories(directory = input.variables$store.path,
