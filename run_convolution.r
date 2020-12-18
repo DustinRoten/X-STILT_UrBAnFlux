@@ -40,4 +40,4 @@ slurm_options <- list(time = '48:00:00',
 
 convolution_apply(site, footprint.directory, edgar.directory,
                   temporal.directory, odiac.directory, carma.filepath,
-                  slurm_options, work.dir = getwd())
+                  slurm_options, work.dir = getwd(), user.id)
