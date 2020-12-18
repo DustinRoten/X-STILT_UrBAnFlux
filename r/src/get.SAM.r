@@ -21,8 +21,8 @@ get.SAM <- function(oco3.filepath, lon.lat) {
   vertices  <- ncvar_get(oco.dat, 'vertices')
   dimnames(oco.lons) <- list(vertices, 1 : length(oco.lat))
   dimnames(oco.lats) <- list(vertices, 1 : length(oco.lat))
-  oco.vert.df <- full_join(melt(oco.lons), melt(oco.lats), by = c('X1', 'X2'))
-  names(oco.vert.df) <- c('vertices', 'indx', 'lons', 'lats')
+  oco.vert.df <- full_join(melt(oco.lons), melt(oco.lats), by = c('Var1', 'Var2')) %>% 
+    rename(vertices = Var1, indx = Var2, lons = value.x, lats = value.y)
   
   
   # Warn level being removed for lite v9 data, DW, 10/15/2018 
