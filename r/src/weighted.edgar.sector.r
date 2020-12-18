@@ -1,4 +1,4 @@
-weighted.edgar.sector <- function(citylon = NULL, citylat = NULL,
+weighted.edgar.sector <- function(citylon = NULL, citylat = NULL, local.tz = NULL,
                                   sector.name = NULL, edgar.dir = NULL,
                                   temporal.downscaling.files = NULL,
                                   time = NULL, nc.extent = NULL) {
@@ -7,12 +7,12 @@ weighted.edgar.sector <- function(citylon = NULL, citylat = NULL,
   scaling.files <- list.files(temporal.downscaling.files, full.names = TRUE,
                               pattern = '\\.csv$')
   
-  if(length(scaling.files) != 7)
+  if(length(scaling.files) != 8)
     stop('Incorrect number of temporal downscaling files.')
   
   # Read in each csv file and name give it a variable name based on
   # the csv base name. There should be 7 csv files for EDGARv5.
-  for(i in 1:7) {
+  for(i in 1:8) {
     scaling.file.name <- substr(basename(scaling.files[i]), 1,
                                 nchar(basename(scaling.files[i]))-4)
     scaling.file.path <- scaling.files[i]
@@ -49,12 +49,15 @@ weighted.edgar.sector <- function(citylon = NULL, citylat = NULL,
   #' Data from `weekly_profiles.csv`
   
   # as.POSIXlt iterates Sun thru Sat as 0 thrus 6. Sun must become 7 for EDGAR
+  # Convert the UTC time to local time
   POSIX.format <- as.POSIXlt(time, format = '%Y.%m.%d.%H.%M.%S', tz = 'UTC')
+  UTC_shift <- suppressWarnings(tz_offset(POSIX.format, tz = local.tz))$utc_offset_h
+  native.POSIX.format <- POSIX.format + UTC_shift*3600
   
-  # Insert UTC offset here
+  # Get the weekday name and number
+  Weekday_name <- weekdays(as.Date(native.POSIX.format))
+  Weekday_id <- subset(sub.weekdays, weekday_name == Weekday_name)$Weekday_id
   
-  Weekday_id <- POSIX.format$wday; if(Weekday_id == 0) {Weekday_id <- 7}
-
   # Monthly profiles are not currently provided for EDGAR v5.
   # A simple division by 12 is used for now.
   MONTHLY_FACTOR <- 1/12
@@ -74,7 +77,8 @@ weighted.edgar.sector <- function(citylon = NULL, citylat = NULL,
   #' For now, the factor from the nearest hour is applied.
   #' This needs to be linearly interpolated later, with particular
   #' attention given to the end times of each day.
-  hr <- as.numeric(POSIX.format$hour); min <- as.numeric(POSIX.format$min)
+  hr <- as.POSIXlt(native.POSIX.format)$hour
+  min <- as.POSIXlt(native.POSIX.format)$min
   hr.round <- round(hr + min/60, 0)
   HOURLY_FACTOR <- subset(hourly_profiles,
                           Country_code_A3 == cntry &
