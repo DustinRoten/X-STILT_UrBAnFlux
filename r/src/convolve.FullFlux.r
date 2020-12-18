@@ -1,7 +1,7 @@
 convolve.FullFlux <- function(site = NULL, citylon = NULL, citylat = NULL,
-                              work.dir = NULL, dir.list = NULL, edgar.dir = NULL,
-                              temp.dir = NULL, odiac.dir = NULL, carma.file = NULL,
-                              out.dir = NULL) {
+                              local.tz = NULL, work.dir = NULL, temp.dir = NULL,
+                              odiac.dir = NULL, carma.file = NULL, out.dir = NULL,
+                              edgar.dir = NULL, footprint = NULL) {
   
   options(stringsAsFactors = FALSE)
   
@@ -10,8 +10,8 @@ convolve.FullFlux <- function(site = NULL, citylon = NULL, citylat = NULL,
   source('r/dependencies.r')
   
   # Acquire date and time from the file path
-  date.time <- str_split_fixed(basename(dir.list), pattern = '_', n = 5)[,3]
-  
+  date.time <- str_split_fixed(basename(footprint), pattern = '_', n = 5)[1]
+
   # Identify the year, month, day, hour, and minute
   if(nchar(date.time) != 12) {print('Invalid date.time format'); return()}
   
@@ -28,27 +28,10 @@ convolve.FullFlux <- function(site = NULL, citylon = NULL, citylat = NULL,
   ########################################################################
   ### First, read in the footprint raster to obtain the working domain ###
   ########################################################################
-  
-  footprint.list <- list.files(file.path(dir.list, 'footprints'),
-                               full.names = TRUE)
-  
-  # List all of the layers in the footprints
-  layer.names <- NULL
-  extents <- data.frame(matrix(NA, nrow = length(footprint.list), ncol = 4))
-  names(extents) <- c('xmin', 'xmax', 'ymin', 'ymax')
-  for(i in 1:length(footprint.list)) {
-    footprint <- stack(footprint.list[i])
-    layer.names <- c(layer.names, names(footprint))
-    extents$xmin[i] <- extent(footprint)[1]
-    extents$xmax[i] <- extent(footprint)[2]
-    extents$ymin[i] <- extent(footprint)[3]
-    extents$ymax[i] <- extent(footprint)[4]
-  }
-  
-  # Get all of the possible layer names
-  layer.names <- unique(layer.names)
-  new.extent <- c(max(extents$xmin), min(extents$xmax),
-                  max(extents$ymin), min(extents$ymax))
+
+  footprint.raster <- stack(footprint)
+  layer.names <- names(footprint.raster)
+    
   ########################################################################
   ########################################################################
   ########################################################################
@@ -63,7 +46,9 @@ convolve.FullFlux <- function(site = NULL, citylon = NULL, citylat = NULL,
   # get.odiac returns the ODIAC raster in kg/m2/s
   odiac.file <- list.files(odiac.dir, pattern = paste0(month, '.tif'),
                            full.names = TRUE)
-  ODIAC <- get.odiac(tiff.path = odiac.file, nc.extent = new.extent)
+  ODIAC <- get.odiac(tiff.path = odiac.file,
+                     nc.extent = extent(footprint.raster))
+  extent(ODIAC) <- extent(footprint.raster)
   
   # Read in the CarMA file here.
   # Disaggregate the large point sources within ODIAC
@@ -130,62 +115,90 @@ convolve.FullFlux <- function(site = NULL, citylon = NULL, citylat = NULL,
         Available.Sector.List[j] <- sectors[i]; j<-j+1      
       }
     }
-  }
+  }; remove('j')
   #####################################
   #####################################
   #####################################
   
-  
-    
-  # Step through the list of times/layers and average them across all footprints.
-  # The dreaded triple nested for loop... Buckle up!
-  
-  # First, we will begin with a particular EDGAR sector
+  time <- gsub('X', '', layer.names)
   for(i in 1:length(Available.Sector.List)) {
     
-    # Ultimately, we need to convolve each footprint with
-    # a weighted ODIAC sector.
-    for(j in 1:length(footprint.list)) {
+    ### Determine the total emissions from EDGAR ###
+    for(j in 1:length(time)) {
+      sector <- weighted.edgar.sector(citylon = citylon, citylat = citylat,
+                                      local.tz = local.tz,
+                                      sector.name = Available.Sector.List[i],
+                                      edgar.dir = edgar.dir,
+                                      temporal.downscaling.files = temp.dir,
+                                      time = time[j],
+                                      nc.extent = extent(footprint.raster))
+      sector <- resample(sector, footprint.raster); sector[sector < 0] <- 0
+      extent(sector) <- extent(footprint.raster)
+      names(sector) <- layer.names[j]
       
-      footprint <- stack(footprint.list[j])
-      footprint <- crop(footprint, new.extent)
-      
-      # Each hourly layer of each footprint will change the
-      # weighting of the EDGAR footprint.
-      for(k in 1:length(layer.names)) {
-        
-        tryCatch({
-          eval(parse(text = paste0('footprint.layer <- footprint$', layer.names[k])))
-        }, error = function(err){
-          r <- raster(); extent(r) <- extent(footprint); res(r) <- res(footprint)
-          values(r) <- 0; footprint.layer <- r; names(footprint.layer) <- layer.names[k]
-        }, finally = {})
-        
-        # Aquire the weighted EDGAR sector here
-        # Resample the sector at ODIAC resolution
-        edgar.sector <- 
-          weighted.edgar.sector(citylon = citylon, citylat = citylat,
-                                sector.name = Available.Sector.List[i],
-                                edgar.dir = edgar.dir,
-                                time = gsub('X', '', layer.names[k]),
-                                temporal.downscaling.files = temp.dir,
-                                nc.extent = extent(footprint))
-        edgar.sector <- resample(edgar.sector, ODIAC)
-        edgar.sector[edgar.sector < 0] <- 0
-        
-        if(j == 1) {summed.layers <- footprint.layer}
-        if(j > 1) {summed.layers <- summed.layers + footprint.layer}
-        
-      } # close the layer loop
-      
-      avg.layer <- summed.layers/length(footprint.list)
-      names(avg.layer) <- layer.names[i]
-      
-      if(i == 1) {regional.footprint <- avg.layer}
-      if(i > 1) {regional.footprint <- addLayer(regional.footprint, avg.layer)}
-      
-    } # close the footprint list loop
+      if(j == 1) {total.sector <- sector; remove('sector')}
+      if(j > 1) {total.sector <- total.sector + sector; remove('sector')}
+    }
+    ################################################
     
-  } # close the sector loop
+    ### Step through each time increment ###
+    for(j in 1:length(time)) {
+      
+      message(paste0('Sector: ', Available.Sector.List[i],
+                     '; time: ', time[j]))
+      
+      ### Read in the current sector of interest (again)
+      current.sector <- weighted.edgar.sector(citylon = citylon, citylat = citylat,
+                                              local.tz = local.tz,
+                                              sector.name = Available.Sector.List[i],
+                                              edgar.dir = edgar.dir,
+                                              temporal.downscaling.files = temp.dir,
+                                              time = time[j],
+                                              nc.extent = extent(footprint.raster))
+      current.sector <- resample(current.sector, footprint.raster)
+      current.sector[current.sector < 0] <- 0
+      extent(current.sector) <- extent(footprint.raster)
+      names(current.sector) <- layer.names[j]
+      
+      # Grab the layer of interest
+      eval(parse(text = paste0('footprint.layer <- footprint.raster$',
+                               layer.names[j])))
+      
+      # Perform the weighting on the footprint layer (hour)
+      if(Available.Sector.List[i] != 'ENE') {
+        weighted.layer <-
+        (current.sector/total.sector)*ODIAC.nlps*footprint.layer
+      } else if(Available.Sector.List[i] == 'ENE') {
+        weighted.layer <-
+          (current.sector/total.sector)*ODIAC.lps*footprint.layer
+      }
+      
+      if(j == 1) {
+        receptor.XCO2 <- weighted.layer
+        remove('weighted.layer')
+      }
+
+      if(j > 1) {
+        receptor.XCO2 <- receptor.XCO2 + weighted.layer
+        remove('weighted.layer')
+      }
+      
+    } # closes layer loop
+
+    # Create a sub-directory for the sector and basename for the XCO2 raster
+    receptor.XCO2.raster_name <-
+      paste(Available.Sector.List[i],
+             gsub('X_foot.nc', 'XCO2.nc', basename(footprint)), sep = '_')
+    
+    # Directory
+    sector.out.dir <- file.path(out.dir, Available.Sector.List[i])
+    if(!dir.exists(sector.out.dir)) dir.create(sector.out.dir)
+    
+    # Save the raster
+    writeRaster(receptor.XCO2, overwrite = TRUE,
+                filename = file.path(sector.out.dir,
+                                     receptor.XCO2.raster_name))
+
+  }
   
 } # close function
