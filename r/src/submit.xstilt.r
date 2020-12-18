@@ -1,7 +1,7 @@
 submit.xstilt <- function(input.variables = NULL) {
   
   mode <- unique(input.variables$oco.sensor)
-  if(length(mode) != 1) stop('Multiple modes submitted')
+  if(length(mode) != 1) stop('Multiple/zero modes submitted')
   
   # Input variables for OCO-2 and OCO-3 modeling
   if(mode != 'Modeled' & mode != 'Interpolate') {
