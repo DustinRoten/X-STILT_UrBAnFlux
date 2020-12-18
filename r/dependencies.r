@@ -7,7 +7,7 @@ invisible(lapply(rsc, source))
 # Other relevant packages
 library(geosphere); library(raster); library(dplyr)
 library(ncdf4); library(lubridate); library(stringr)
-library(ggmap)
+library(ggmap); library(lutz); library(reshape)
 
 # required STILT functions
 source('X-STILT/stilt_hysplit/r/src/write_footprint.r')
