@@ -111,7 +111,7 @@ run_xstilt_UrBAnFlux_OCO <- function(input.variables = NULL) {
   if (api.key == '') stop('Missing googleAPI, insert your API in insert_ggAPI.csv\n')
   register_google(key = api.key)
   
-  
+
   # ------------------------------- city params ------------------------------- #
   site <- input.variables$site
   
