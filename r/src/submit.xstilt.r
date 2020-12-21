@@ -14,7 +14,7 @@ submit.xstilt <- function(input.variables = NULL) {
                  user.id = input.variables$user.id)
       
       # Submit the job
-      run_xstilt_UrBAnFlux_1(input.variables = input.variables[i,])
+      run_xstilt_UrBAnFlux_OCO(input.variables = input.variables[i,])
       message(paste0('Job ', i, ' of ', nrow(input.variables), ' submitted.'))
     }
     
