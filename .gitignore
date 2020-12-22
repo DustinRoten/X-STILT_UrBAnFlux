@@ -8,4 +8,4 @@ OCO2_Transect_Lists
 SLURM_SingleNode.sh
 _rslurm*
 r/Untracked_Scripts
-run_xstilt.v2.r
+r/src/notify.r
