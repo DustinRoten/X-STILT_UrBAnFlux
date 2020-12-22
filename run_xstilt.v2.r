@@ -5,11 +5,11 @@ source('r/dependencies.r')
 options(stringsAsFactors = FALSE)
 
 site <- 'Los Angeles'
-input.path  <- '/uufs/chpc.utah.edu/common/home/lin-group7/group_data'
-oco.sensor  <- c('OCO-2', 'OCO-3', 'Modeled', 'Interpolate')[3]
+input.path  <- '/uufs/chpc.utah.edu/common/home/lin-group11/Roten_InputData'
+oco.sensor  <- c('OCO-2', 'OCO-3', 'Modeled', 'Interpolate')[2]
 data.level <- c('L1', 'L2')[2]
-oco.ver     <- c('b7rb', 'b8r', 'b9r', 'VEarlyR')[3] # retrieval algo ver
-odiac.vname <- c('2016', '2017', '2018', '2019')[4] # ODIAC version
+oco.ver     <- c('b7rb', 'b8r', 'b9r', 'VEarlyR')[4] # retrieval algo ver
+odiac.vname <- c('2016', '2017', '2018', '2019', '2020')[5] # ODIAC version
  
 project <- oco.sensor   # name your project
 
@@ -17,9 +17,22 @@ store.path <- '/uufs/chpc.utah.edu/common/home/lin-group11/XCO2_Climatology'
 
 ### setting up the OCO sounding search grid
 ### These variables will be ignored if 'OCO-2/OCO-3' is not selected
-urbanTF <- T; dlon.urban <- 0.5; dlat.urban <- 0.5
+urbanTF <- T; dlon.urban <- 0.75; dlat.urban <- 0.75
 timestr <- c(
-  '2019072620'
+  # '2020022419',
+  '2020030316',
+  '2020040121',
+  '2020041523',
+  '2020042320',
+  '2020050516',
+  '2020052700',
+  '2020205322',
+  '2020080420',
+  '2020080818',
+  '2020081217',
+  '2020081423',
+  '2020102021',
+  '2020102818'
 )# If unsure, set as NA.
 
 ### setting up the custom X-STILT grid
@@ -62,7 +75,7 @@ run_ver_err   <- F  # T: set error parameters in STEP 4
 run_emiss_err <- F  # T: get XCO2 error due to prior emiss err, see STEP 4 and 8
 run_sim       <- F  # T: do analysis with existing trajec/foot, see STEP 8
 delt <- 2           # fixed timestep [min]; set = 0 for dynamic timestep
-nhrs <- -12         # number of hours backward (-) or forward (+)
+nhrs <- -18         # number of hours backward (-) or forward (+)
 
 # path for the ARL format of meteo fields
 # simulation_step() will find corresponding files
@@ -93,7 +106,7 @@ projection     <- '+proj=longlat'
 
 ## use SLURM for parallel simulation settings
 # time allowed for running hymodelc before forced terminations
-n_nodes  <- 9
+n_nodes  <- 4
 n_cores  <- 8
 timeout  <-  6 * 60 * 60  # in sec
 job.time <- '06:00:00'    # total job time
@@ -101,6 +114,10 @@ account = 'lin-kp'
 partition = 'lin-kp'
 
 #########################################################################################
+# Deal with timestr vs. timestamp
+if(oco.sensor == 'Modeled' | oco.sensor == 'Interpolate') timestr <- NA
+if(oco.sensor == 'OCO-2' | oco.sensor == 'OCO-3') timestamp <- NA
+
 input.variables <- data.frame(user.id = user.id, account = account, partition = partition,
   homedir = homedir, site = site, input.path = input.path, oco.sensor = oco.sensor,
   data.level = data.level, oco.ver = oco.ver, odiac.vname = odiac.vname, project = oco.sensor,
@@ -116,4 +133,4 @@ input.variables <- data.frame(user.id = user.id, account = account, partition = 
   hnf_plume = hnf_plume, smooth_factor = smooth_factor, time_integrate = time_integrate,
   projection = projection, n_nodes = n_nodes, n_cores = n_cores, timeout = timeout, job.time = job.time)
 
-submit.xstilt(input.variables)
+submit.xstilt(input.variables, user.email = '3366202544@cwwmms.com')
