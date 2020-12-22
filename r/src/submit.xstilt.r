@@ -1,4 +1,4 @@
-submit.xstilt <- function(input.variables = NULL) {
+submit.xstilt <- function(input.variables = NULL, user.email = NULL) {
   
   mode <- unique(input.variables$oco.sensor)
   if(length(mode) != 1) stop('Multiple/zero modes submitted')
@@ -16,6 +16,13 @@ submit.xstilt <- function(input.variables = NULL) {
       # Submit the job
       run_xstilt_UrBAnFlux_OCO(input.variables = input.variables[i,])
       message(paste0('Job ', i, ' of ', nrow(input.variables), ' submitted.'))
+      
+      if(!is.null(user.email)) {
+        subject.text = 'CHPC Update'
+        body.text = paste0('Job ', i, ' of ', nrow(input.variables), ' submitted.')
+        notify(user.email, subject.text, body.text)
+      }; Sys.sleep(60)
+      
     }
     
     # Input variables for modeled XCO2 over custom domains.
@@ -32,7 +39,12 @@ submit.xstilt <- function(input.variables = NULL) {
         # Submit the job (interpolation)
         run_xstilt_UrBAnFlux_modeled(input.variables = input.variables[i,])
         message(paste0('Custom domain job ', i, ' of ', nrow(input.variables), ' submitted.'))
-        Sys.sleep(60)
+        
+        if(!is.null(user.email)) {
+          subject.text = 'CHPC Update'
+          body.text = paste0('Job ', i, ' of ', nrow(input.variables), ' submitted.')
+          notify(user.email, subject.text, body.text)
+        }; Sys.sleep(60)
         
         #' To save space, remove the unwanted files from the previous directory
         if(i > 1) {purge.directories(directory = input.variables$store.path,
