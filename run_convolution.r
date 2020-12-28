@@ -1,10 +1,10 @@
-#run_convolution
+options(stringsAsFactors = FALSE)
 
+#run_convolution
 user.id <- 'u1211790'
 homedir <- '/uufs/chpc.utah.edu/common/home/u1211790'
 setwd(file.path(homedir, 'X-STILT_UrBAnFlux'))
 source('r/dependencies.r')
-options(stringsAsFactors = FALSE)
 
 #register the api key for google maps to work
 api.key <- read.csv('X-STILT/insert_ggAPI.csv', header = FALSE)
@@ -14,7 +14,7 @@ site <- 'Los Angeles'
 footprint.directory <- '/uufs/chpc.utah.edu/common/home/lin-group11/XCO2_Climatology'
 
 ##### Universal location for emission inventory information #####
-input.path  <- '/uufs/chpc.utah.edu/common/home/lin-group7/group_data'
+input.path  <- '/uufs/chpc.utah.edu/common/home/lin-group11/Roten_InputData'
 
 # Identify the location of EDGAR related inputs.
 # (The EDGAR inventory and temporal downscaling files)
@@ -26,7 +26,7 @@ temporal.downscaling <- 'ext/EDGAR_TemporalProfiles'
 carma.file <- 'ext/CARMA/Plant.csv' #file name
 
 # Identify the location of ODIAC related inputs.
-odiac.extension <- 'ODIAC/ODIAC2019/2018'
+odiac.extension <- 'ODIAC/ODIAC2020/2019'
 
 # Create paths to all relevant directories.
 edgar.directory <- file.path(input.path, edgar.extension)
