@@ -174,8 +174,7 @@ convolve.FullFlux <- function(site = NULL, citylon = NULL, citylat = NULL,
       }
       
       if(j == 1) {
-        receptor.XCO2 <- weighted.layer
-        remove('weighted.layer')
+        receptor.XCO2 <- weighted.layer; remove('weighted.layer')
       }
 
       if(j > 1) {
