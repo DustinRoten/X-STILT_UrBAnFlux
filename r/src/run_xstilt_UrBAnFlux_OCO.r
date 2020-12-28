@@ -102,6 +102,8 @@ run_xstilt_UrBAnFlux_OCO <- function(input.variables = NULL) {
   xstilt_wd <- file.path(homedir, 'X-STILT_UrBAnFlux', 'X-STILT') 
   setwd(xstilt_wd); source('r/dependencies.r')
   
+  stop('TESTING')
+  
   # *** there is a current bug with the rslurm package, you may need to 
   # mannually pull the development version from github by doing:
   #devtools::install_github('SESYNC-ci/rslurm')               # DW, 11/6/2020
