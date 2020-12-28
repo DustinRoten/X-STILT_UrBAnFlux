@@ -11,7 +11,7 @@ submit.xstilt <- function(input.variables = NULL, user.email = NULL) {
       
       # Wait for other jobs to complete
       SLURM.wait(selected.partition = input.variables$partition[i],
-                 user.id = input.variables$user.id)
+                 user.id = input.variables$user.id[i])
       
       # Submit the job
       run_xstilt_UrBAnFlux_OCO(input.variables = input.variables[i,])
