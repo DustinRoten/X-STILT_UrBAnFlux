@@ -79,13 +79,29 @@ weighted.edgar.sector <- function(citylon = NULL, citylat = NULL, local.tz = NUL
   #' attention given to the end times of each day.
   hr <- as.POSIXlt(native.POSIX.format)$hour
   min <- as.POSIXlt(native.POSIX.format)$min
-  hr.round <- round(hr + min/60, 0)
-  HOURLY_FACTOR <- subset(hourly_profiles,
+  
+  # Linear interpolation of the hourly factor
+  # initial time
+  HOURLY_FACTOR_1 <- subset(hourly_profiles,
                           Country_code_A3 == cntry &
                             activity_code == act.cde &
                             month_id == month(POSIX.format) &
-                            Daytype_id == Dy_typ)[,(4+hr.round)]
-  if(length(HOURLY_FACTOR) == 0) HOURLY_FACTOR <- 0
+                            Daytype_id == Dy_typ)[,(4+hr)]
+  
+  # final time
+  HOURLY_FACTOR_2 <- subset(hourly_profiles,
+                            Country_code_A3 == cntry &
+                              activity_code == act.cde &
+                              month_id == month(POSIX.format) &
+                              Daytype_id == Dy_typ)[,(5+hr)]
+  
+  if(length(HOURLY_FACTOR_1) == 0 | length(HOURLY_FACTOR_2) == 0) {
+    HOURLY_FACTOR <- 0
+  } else {
+    # interpolate here
+    HOURLY_FACTOR <-
+      HOURLY_FACTOR_1 + (min/60)*(HOURLY_FACTOR_2 - HOURLY_FACTOR_1)
+  }
   
   #' Apply the temporal downscaling to the EDGAR sector here
   #' Determine days in month for part of the downscaling process
