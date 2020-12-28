@@ -11,7 +11,8 @@ convolution_apply <- function(site = NULL, ftpt.dir = NULL, edgar.dir = NULL,
   
   #' Use the location string to obtain geographic information.
   lon.lat <- geocode(site)
-  time.zone <- tz_lookup_coords(lat = lon.lat$lat, lon = lon.lat$lon)
+  time.zone <-
+    suppressWarnings(tz_lookup_coords(lat = lon.lat$lat, lon = lon.lat$lon))
   
   for(i in 1:length(output.directory)) {
     
@@ -45,8 +46,6 @@ convolution_apply <- function(site = NULL, ftpt.dir = NULL, edgar.dir = NULL,
     
     message(paste0('Job ', i, ' of ', length(output.directory),
                    ' submitted.'))
-    
-    stop('Test Loop')
   }
   
 }
