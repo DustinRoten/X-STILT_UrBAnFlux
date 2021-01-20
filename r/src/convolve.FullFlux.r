@@ -21,6 +21,11 @@ convolve.FullFlux <- function(site = NULL, citylon = NULL, citylat = NULL,
   hour <- substr(date.time, 9, 10)
   minute <- substr(date.time, 11, 12)
   
+  # Convert the time and date to POSIX format to obtain the days in month
+  string.format <- paste0(year, '-', month, '-', day, ' ', hour, ':', minute)
+  pos.format <- as.POSIXlt(string.format, format = '%Y-%m-%d %H:%M', tz = 'UTC')
+  month.days <- days_in_month(pos.format)
+  
   # Create the appropriate directory for results
   if(!dir.exists(out.dir))
     dir.create(out.dir, showWarnings = FALSE)
@@ -28,10 +33,8 @@ convolve.FullFlux <- function(site = NULL, citylon = NULL, citylat = NULL,
   ########################################################################
   ### First, read in the footprint raster to obtain the working domain ###
   ########################################################################
-
   footprint.raster <- stack(footprint)
   layer.names <- names(footprint.raster)
-    
   ########################################################################
   ########################################################################
   ########################################################################
@@ -47,7 +50,8 @@ convolve.FullFlux <- function(site = NULL, citylon = NULL, citylat = NULL,
   odiac.file <- list.files(odiac.dir, pattern = paste0(month, '.tif'),
                            full.names = TRUE)
   ODIAC <- get.odiac(tiff.path = odiac.file,
-                     nc.extent = extent(footprint.raster))
+                     nc.extent = extent(footprint.raster),
+                     convert.units = FALSE)
   extent(ODIAC) <- extent(footprint.raster)
   
   # Read in the CarMA file here.
@@ -120,45 +124,50 @@ convolve.FullFlux <- function(site = NULL, citylon = NULL, citylat = NULL,
   #####################################
   #####################################
   
-  time <- gsub('X', '', layer.names)
+  ### Determine the total emissions from EDGAR ###
   for(i in 1:length(Available.Sector.List)) {
     
-    ### Determine the total emissions from EDGAR ###
-    for(j in 1:length(time)) {
-      sector <- weighted.edgar.sector(citylon = citylon, citylat = citylat,
-                                      local.tz = local.tz,
-                                      sector.name = Available.Sector.List[i],
-                                      edgar.dir = edgar.dir,
-                                      temporal.downscaling.files = temp.dir,
-                                      time = time[j],
-                                      nc.extent = extent(footprint.raster))
-      sector <- resample(sector, footprint.raster); sector[sector < 0] <- 0
-      extent(sector) <- extent(footprint.raster)
-      names(sector) <- layer.names[j]
-      
-      if(j == 1) {total.sector <- sector; remove('sector')}
-      if(j > 1) {total.sector <- total.sector + sector; remove('sector')}
-    }
-    ################################################
+    # Generate a temporary file path variable for each sector
+    temp.filepath <- list.files(edgar.dir,
+                                pattern = Available.Sector.List[i],
+                                full.names = TRUE)
+    edgar.sector <- get.edgar.sector(nc.path = temp.filepath,
+                                     nc.extent = extent(footprint.raster))
+    
+    # Resample each edgar sector
+    resampled.sector <- resample(edgar.sector, ODIAC)
+    resampled.sector[resampled.sector < 0] <- 0
+    
+    if(i == 1) total.EDGAR <- resampled.sector
+    if(i > 1) total.EDGAR <- total.EDGAR + resampled.sector
+    remove('resampled.sector')
+    
+  }
+  
+  time <- gsub('X', '', layer.names)
+  for(i in 1:length(Available.Sector.List)) {
     
     ### Step through each time increment ###
     for(j in 1:length(time)) {
       
-      message(paste0('Sector: ', Available.Sector.List[i],
-                     '; time: ', time[j]))
+      # Generate a temporary file path variable for each sector
+      temp.filepath <- list.files(edgar.dir,
+                                  pattern = Available.Sector.List[i],
+                                  full.names = TRUE)
+      edgar.sector <- get.edgar.sector(nc.path = temp.filepath,
+                                       nc.extent = extent(footprint.raster))
       
-      ### Read in the current sector of interest (again)
-      current.sector <- weighted.edgar.sector(citylon = citylon, citylat = citylat,
-                                              local.tz = local.tz,
-                                              sector.name = Available.Sector.List[i],
-                                              edgar.dir = edgar.dir,
-                                              temporal.downscaling.files = temp.dir,
-                                              time = time[j],
-                                              nc.extent = extent(footprint.raster))
-      current.sector <- resample(current.sector, footprint.raster)
-      current.sector[current.sector < 0] <- 0
-      extent(current.sector) <- extent(footprint.raster)
-      names(current.sector) <- layer.names[j]
+      # Resample each edgar sector
+      resampled.sector <- resample(edgar.sector, ODIAC)
+      resampled.sector[resampled.sector < 0] <- 0
+      
+      # Grab the weighting value for the sector here
+      weight <- edgar.sector.weighting(citylon, citylat, local.tz,
+                                       sector.name = Available.Sector.List[i],
+                                       temporal.downscaling.files = temp.dir,
+                                       time = time[j], monthly = TRUE)
+      weighted.sector <- weight*resampled.sector
+      names(weighted.sector) <- layer.names[j]
       
       # Grab the layer of interest
       eval(parse(text = paste0('footprint.layer <- footprint.raster$',
@@ -166,23 +175,62 @@ convolve.FullFlux <- function(site = NULL, citylon = NULL, citylat = NULL,
       
       # Perform the weighting on the footprint layer (hour)
       if(Available.Sector.List[i] != 'ENE') {
+        
+        # Weight ODIAC to generate the sector
+        # The weighted layer has NEW UNITS: Tonne Carbon/cell/hour
         weighted.layer <-
-        (current.sector/total.sector)*ODIAC.nlps*footprint.layer
+          (weighted.sector/total.EDGAR)*ODIAC.nlps
+        
+        ### Convert the weighted layer to umol/m2/s ###
+        #' This next bit of code has been modified from `get.odiac()`.
+        
+        # Compute area using area() function in raster package
+        area.raster <- raster::area(weighted.layer) * 1E6    # convert km2 to m2
+        
+        # Convert the unit of CO2 emiss from Tonne Carbon/cell/hour to umol/m2/s
+        weighted.layer <- weighted.layer * 1E6 / 12 * 1E6 # convert tonne-C to uomol-C (= umole-CO2)
+        weighted.layer <- weighted.layer / 60 / 60	# convert per month to per second
+        weighted.layer <- weighted.layer / area.raster		# convert per cell to per m2
+        # NOW sel.co2 has unit of umole-CO2/m2/s, can be used directly with footprint
+        
+        # Convolve with the footprint layer
+        weighted.XCO2.layer <- weighted.layer*footprint.layer
+        
       } else if(Available.Sector.List[i] == 'ENE') {
+        # Weight ODIAC to generate the sector
         weighted.layer <-
-          (current.sector/total.sector)*ODIAC.lps*footprint.layer
+          (weighted.sector/total.EDGAR)*ODIAC.lps
+        
+        ### Convert the weighted layer to umol/m2/s ###
+        # Compute area using area() function in raster package
+        area.raster <- raster::area(weighted.layer) * 1E6    # convert km2 to m2
+        
+        # Convert the unit of CO2 emiss from Tonne Carbon/cell/hour to umol/m2/s
+        weighted.layer <- weighted.layer * 1E6 / 12 * 1E6 # convert tonne-C to uomol-C (= umole-CO2)
+        weighted.layer <- weighted.layer / 60 / 60	# convert per month to per second
+        weighted.layer <- weighted.layer / area.raster		# convert per cell to per m2
+        # NOW sel.co2 has unit of umole-CO2/m2/s, can be used directly with footprint
+        
+        # Convolve with the footprint layer
+        weighted.XCO2.layer <- weighted.layer*footprint.layer
       }
       
       if(j == 1) {
-        receptor.XCO2 <- weighted.layer; remove('weighted.layer')
+        receptor.XCO2 <- weighted.XCO2.layer
+        remove('weighted.layer')
       }
 
       if(j > 1) {
-        receptor.XCO2 <- receptor.XCO2 + weighted.layer
+        receptor.XCO2 <- receptor.XCO2 + weighted.XCO2.layer
         remove('weighted.layer')
       }
       
+      message(paste0(i, '/', length(Available.Sector.List),
+                     '; ', j, '/', length(time)))
+      
     } # closes layer loop
+    
+    ######
 
     # Create a sub-directory for the sector and basename for the XCO2 raster
     receptor.XCO2.raster_name <-
@@ -199,5 +247,34 @@ convolve.FullFlux <- function(site = NULL, citylon = NULL, citylat = NULL,
                                      receptor.XCO2.raster_name))
 
   }
+  
+  # Converted ODIAC data
+  ODIAC.converted <- get.odiac(tiff.path = odiac.file,
+                               nc.extent = extent(footprint.raster),
+                               convert.units = TRUE)
+  
+  # Create the summed footprint here for static emissions
+  # Raster functions would be faster but they generate temp files
+  # Thus, a low-tech for loop is used.
+  for(i in 1:length(time)) {
+    # Grab the layer of interest
+    eval(parse(text = paste0('footprint.layer <- footprint.raster$',
+                             layer.names[j])))
+    if(i == 1) summed.footprint <- footprint.layer
+    if(i > i) summed.footprint <- summed.footprint + footprint.layer
+  }
+  
+  # Static XCO2 directory
+  static.XCO2.dir <- file.path(out.dir, '_Static.XCO2')
+  if(!dir.exists(static.XCO2.dir)) dir.create(static.XCO2.dir)
+  
+  static.XCO2.raster_name <-
+    paste('static', gsub('X_foot.nc', 'XCO2.nc', basename(footprint)),
+          sep = '_')
+  
+  # Save the static raster
+  writeRaster(summed.footprint*ODIAC.converted, overwrite = TRUE,
+              filename = file.path(static.XCO2.dir,
+                                   static.XCO2.raster_name))
   
 } # close function
