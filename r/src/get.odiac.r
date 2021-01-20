@@ -3,7 +3,8 @@
 # This is a shameless knockoff of D. Wu's function tif2nc.odiacv3.r
 # DW, update with ODIACv2017, 11/01/2017
 
-get.odiac <- function(tiff.path, nc.extent, YYYYMM = NULL){
+get.odiac <- function(tiff.path, nc.extent, YYYYMM = NULL,
+                      convert.units = TRUE) {
 
   # Some QA/QC
   if(!is.character(YYYYMM) & !is.null(YYYYMM))
@@ -44,14 +45,18 @@ get.odiac <- function(tiff.path, nc.extent, YYYYMM = NULL){
   # subset spatial domain
   sel.emiss <- crop(emiss, nc.extent)
 
-  # Method 2 -- compute area using area() function in raster package
-  area.raster <- raster::area(sel.emiss) * 1E6    # convert km2 to m2
+  if(convert.units) {
   
-  # convert the unit of CO2 emiss from Tonne Carbon/cell/month to umol/m2/s
-  sel.emiss <- sel.emiss * 1E6 / 12 * 1E6 # convert tonne-C to uomol-C (= umole-CO2)
-  sel.emiss <- sel.emiss / month.days / 24 / 60 / 60	# convert per month to per second
-  sel.emiss <- sel.emiss / area.raster		# convert per cell to per m2
-  # NOW sel.co2 has unit of umole-CO2/m2/s, can be used directly with footprint
+    # Method 2 -- compute area using area() function in raster package
+    area.raster <- raster::area(sel.emiss) * 1E6    # convert km2 to m2
+    
+    # convert the unit of CO2 emiss from Tonne Carbon/cell/month to umol/m2/s
+    sel.emiss <- sel.emiss * 1E6 / 12 * 1E6 # convert tonne-C to uomol-C (= umole-CO2)
+    sel.emiss <- sel.emiss / month.days / 24 / 60 / 60	# convert per month to per second
+    sel.emiss <- sel.emiss / area.raster		# convert per cell to per m2
+    # NOW sel.co2 has unit of umole-CO2/m2/s, can be used directly with footprint
+    
+  }
 
   # finally, return raster
   return(sel.emiss)
