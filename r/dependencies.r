@@ -8,6 +8,7 @@ invisible(lapply(rsc, source))
 library(geosphere); library(raster); library(dplyr)
 library(ncdf4); library(lubridate); library(stringr)
 library(ggmap); library(lutz); library(reshape2)
+library(viridis)
 
 # required STILT functions
 source('X-STILT/stilt/r/src/write_footprint.r')
