@@ -1,7 +1,6 @@
-weighted.edgar.sector <- function(citylon = NULL, citylat = NULL, local.tz = NULL,
-                                  sector.name = NULL, edgar.dir = NULL,
-                                  temporal.downscaling.files = NULL,
-                                  time = NULL, nc.extent = NULL) {
+edgar.sector.weighting <- function(citylon = NULL, citylat = NULL, local.tz = NULL,
+                                   sector.name = NULL, temporal.downscaling.files = NULL,
+                                   time = NULL, monthly = FALSE) {
   
   # First, read in the butt load of temporal downscaling csv files
   scaling.files <- list.files(temporal.downscaling.files, full.names = TRUE,
@@ -109,13 +108,15 @@ weighted.edgar.sector <- function(citylon = NULL, citylat = NULL, local.tz = NUL
   #' After the bilinear interpolation, replace negative values with zero.
   #' Weighted as described in `Crippa et al. (2020)`.
   n_days <- days_in_month(POSIX.format)
-  weighting <- (MONTHLY_FACTOR*(7/n_days)*DAILY_FACTOR*HOURLY_FACTOR)
-  names(weighting) <- 'weight.value'
   
-  # Finally, get the EDGAR sector raster and weight it accordingly!
-  nc.path <- list.files(edgar.dir, pattern = sector.name, full.names = TRUE)
-  edgar.sector <- get.edgar.sector(nc.path, nc.extent)
-
-  return(weighting*edgar.sector)
+  if(!monthly) {
+    weighting <- (MONTHLY_FACTOR*(7/n_days)*DAILY_FACTOR*HOURLY_FACTOR)
+    names(weighting) <- 'weight.value'
+  } else if(monthly) {
+    weighting <- (7/n_days)*DAILY_FACTOR*HOURLY_FACTOR
+    names(weighting) <- 'weight.value'
+  }
+  
+  return(weighting)
   
 }
