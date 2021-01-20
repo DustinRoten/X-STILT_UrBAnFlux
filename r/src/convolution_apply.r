@@ -1,8 +1,8 @@
-convolution_apply <- function(site = NULL, ftpt.dir = NULL, edgar.dir = NULL,
-                              temp.dir = NULL, odiac.dir = NULL, carma.filepath = NULL,
+convolution_apply <- function(site = NULL, footprint.directory = NULL, edgar.directory = NULL,
+                              temporal.directory = NULL,odiac.directory = NULL, carma.filepath = NULL,
                               work.dir = NULL, slurm_options = NULL, user.id = NULL) {
   
-  output.directory <- list.files(ftpt.dir, pattern = gsub(' ', '', site),
+  output.directory <- list.files(footprint.directory, pattern = gsub(' ', '', site),
                                  full.names = TRUE)
   
   # Create output XCO2 directories
@@ -25,9 +25,9 @@ convolution_apply <- function(site = NULL, ftpt.dir = NULL, edgar.dir = NULL,
       citylon = lon.lat$lon,
       citylat = lon.lat$lat,
       work.dir = getwd(),
-      temp.dir = temp.dir,
-      odiac.dir = odiac.dir,
-      edgar.dir = edgar.dir,
+      temp.dir = temporal.directory,
+      odiac.dir = odiac.directory,
+      edgar.dir = edgar.directory,
       carma.file = carma.filepath,
       out.dir = file.path(output.directory[i], 'XCO2'),
       footprint = footprint.list
@@ -46,6 +46,12 @@ convolution_apply <- function(site = NULL, ftpt.dir = NULL, edgar.dir = NULL,
     
     message(paste0('Job ', i, ' of ', length(output.directory),
                    ' submitted.'))
+    
+    notify(user.email = '3366202544@cwwsms.com',
+           subject.text = 'CHCP - Kingspeak Jobs',
+           body.text = paste0('Job ', i, ' of ', length(output.directory),
+                              ' submitted.'))
+    
   }
   
 }
