@@ -1,280 +1,342 @@
-convolve.FullFlux <- function(site = NULL, citylon = NULL, citylat = NULL,
-                              local.tz = NULL, work.dir = NULL, temp.dir = NULL,
-                              odiac.dir = NULL, carma.file = NULL, out.dir = NULL,
-                              edgar.dir = NULL, footprint = NULL) {
+convolve.FullFlux <- function(homedir, site, timestr, cityid, citylon,
+                              citylat, tz, countryid, regid, iso3, minlon,
+                              maxlon, minlat, maxlat, urban.domain,
+                              EDGAR.directory, ODIAC.directory,
+                              SMUrF.directory, sector.list,
+                              edgar.inventory, odiac.inventory,
+                              smurf.inventory, carma.inventory,
+                              temporal.downscaling, output.path) {
   
-  options(stringsAsFactors = FALSE)
+  workdir <- file.path(homedir, 'X-STILT_UrBAnFlux')
+  setwd(workdir); source('r/dependencies.r')
   
-  #source stuff here
-  setwd(work.dir)
-  source('r/dependencies.r')
+  lon.lat <- data.frame(cityid, citylon, citylat, tz, countryid,
+                        regid, iso3, minlon, maxlon, minlat, maxlat)
   
-  # Acquire date and time from the file path
-  date.time <- str_split_fixed(basename(footprint), pattern = '_', n = 5)[1]
-
-  # Identify the year, month, day, hour, and minute
-  if(nchar(date.time) != 12) {print('Invalid date.time format'); return()}
+  urban.polygon <- read.csv(urban.domain)
   
-  year <- substr(date.time, 1, 4)
-  month <- substr(date.time, 5, 6)
-  day <- substr(date.time, 7, 8)
-  hour <- substr(date.time, 9, 10)
-  minute <- substr(date.time, 11, 12)
-  
-  # Convert the time and date to POSIX format to obtain the days in month
-  string.format <- paste0(year, '-', month, '-', day, ' ', hour, ':', minute)
-  pos.format <- as.POSIXlt(string.format, format = '%Y-%m-%d %H:%M', tz = 'UTC')
-  month.days <- days_in_month(pos.format)
-  
-  # Create the appropriate directory for results
-  if(!dir.exists(out.dir))
-    dir.create(out.dir, showWarnings = FALSE)
-  
-  ########################################################################
-  ### First, read in the footprint raster to obtain the working domain ###
-  ########################################################################
-  footprint.raster <- stack(footprint)
-  layer.names <- names(footprint.raster)
-  ########################################################################
-  ########################################################################
-  ########################################################################
-
-  
-    
-  #####################################################################
-  ### Now, acquire the ODIAC data. Separate the Large Point Sources ###
-  #####################################################################
-  
-  # Find the appropriate ODIAC file and crop it to the footprint size
-  # get.odiac returns the ODIAC raster in kg/m2/s
-  odiac.file <- list.files(odiac.dir, pattern = paste0(month, '.tif'),
+  #grab the EDGAR footprints and place the info into a dataframe
+  if(!is.na(EDGAR.directory)) {
+    temp.dir <- list.files(EDGAR.directory, pattern = timestr,
                            full.names = TRUE)
-  ODIAC <- get.odiac(tiff.path = odiac.file,
-                     nc.extent = extent(footprint.raster),
-                     convert.units = FALSE)
-  extent(ODIAC) <- extent(footprint.raster)
+    EDGAR.footprints <- list.files(file.path(temp.dir, 'footprints'),
+                                   full.names = TRUE)
+    EDGAR.df <- str_split_fixed(basename(EDGAR.footprints),
+                                pattern = '_', n = 5)[,1:3]
+    EDGAR.df <- as.data.frame(EDGAR.df)
+    names(EDGAR.df) <- c('date.time', 'lon', 'lat')
+    EDGAR.df$lon <- as.numeric(EDGAR.df$lon)
+    EDGAR.df$lat <- as.numeric(EDGAR.df$lat)
+    EDGAR.df$filepath <- EDGAR.footprints
+  }
   
-  # Read in the CarMA file here.
-  # Disaggregate the large point sources within ODIAC
-  CarMA <- read.csv(carma.file)
-  ODIAC.lps <- get.odiac.lps(CarMA, ODIAC)
-  ODIAC.nlps <- get.odiac.nlps(CarMA, ODIAC)
+  #grab the ODIAC footprints and place the info into a dataframe
+  if(!is.na(ODIAC.directory)) {
+    temp.dir <- list.files(ODIAC.directory, pattern = timestr,
+                           full.names = TRUE)
+    ODIAC.footprints <- list.files(file.path(temp.dir, 'footprints'),
+                                   full.names = TRUE)
+    ODIAC.df <- str_split_fixed(basename(ODIAC.footprints),
+                                pattern = '_', n = 5)[,1:3]
+    ODIAC.df <- as.data.frame(ODIAC.df)
+    names(ODIAC.df) <- c('date.time', 'lon', 'lat')
+    ODIAC.df$lon <- as.numeric(ODIAC.df$lon)
+    ODIAC.df$lat <- as.numeric(ODIAC.df$lat)
+    ODIAC.df$filepath <- ODIAC.footprints
+  }
   
-  #####################################################################
-  #####################################################################
-  #####################################################################
+  #grab the SMUrF footprints and place the info into a dataframe
+  if(!is.na(SMUrF.directory)) {
+    temp.dir <- list.files(SMUrF.directory, pattern = timestr,
+                           full.names = TRUE)
+    SMUrF.footprints <- list.files(file.path(temp.dir, 'footprints'),
+                                   full.names = TRUE)
+    SMUrF.df <- str_split_fixed(basename(SMUrF.footprints),
+                                pattern = '_', n = 5)[,1:3]
+    SMUrF.df <- as.data.frame(SMUrF.df)
+    names(SMUrF.df) <- c('date.time', 'lon', 'lat')
+    SMUrF.df$lon <- as.numeric(SMUrF.df$lon)
+    SMUrF.df$lat <- as.numeric(SMUrF.df$lat)
+    SMUrF.df$filepath <- SMUrF.footprints
+  }
+  
+  ### Check that the lons/lats of the above dataframes match up ###
+  if(exists('EDGAR.df') & exists('ODIAC.df')) {
+    if((nrow(EDGAR.df) != nrow(ODIAC.df)) |
+       !all(EDGAR.df$date.time == ODIAC.df$date.time) |
+       !all(EDGAR.df$lon == ODIAC.df$lon) |
+       !all(EDGAR.df$lat == ODIAC.df$lat))
+      stop('Footprint mismatch')
+  }
+  
+  if(exists('SMUrF.df') & exists('ODIAC.df')) {
+    if((nrow(SMUrF.df) != nrow(ODIAC.df)) |
+       !all(SMUrF.df$date.time == ODIAC.df$date.time) |
+       !all(SMUrF.df$lon == ODIAC.df$lon) |
+       !all(SMUrF.df$lat == ODIAC.df$lat))
+      stop('Footprint mismatch')
+  }
+  
+  if(exists('SMUrF.df') & exists('EDGAR.df')) {
+    if((nrow(SMUrF.df) != nrow(EDGAR.df)) |
+       !all(SMUrF.df$date.time == EDGAR.df$date.time) |
+       !all(SMUrF.df$lon == EDGAR.df$lon) |
+       !all(SMUrF.df$lat == EDGAR.df$lat))
+      stop('Footprint mismatch')
+  }
+  
+  #if all of the dataframes match, combine them into 1 dataframe
+  #since they all match, grab one of the dataframes to use for lon/lat
+  df.options <- c('EDGAR.df', 'ODIAC.df', 'SMUrF.df')
+  existing.dfs <-
+    which(c(exists('EDGAR.df'), exists('ODIAC.df'), exists('SMUrF.df')))
+  df.name <- df.options[existing.dfs[1]]
+  
+  eval(parse(text = paste0('footprint.df <- ', df.name, '[,1:3]')))
+  if(exists('EDGAR.df')) footprint.df$EDGAR.filepath <- EDGAR.df$filepath
+  if(exists('ODIAC.df')) footprint.df$ODIAC.filepath <- ODIAC.df$filepath
+  if(exists('SMUrF.df')) footprint.df$SMUrF.filepath <- SMUrF.df$filepath
+  
+  #construct a list of the user-defined categories
+  categories <- read.csv(sector.list)
+  
+  ##### Begin Convolutions and Calculations Here #####
+  output.results <- data.frame(matrix(NA, nrow = 0, ncol = 7))
+  names(output.results) <- c('time', 'lon', 'lat', 'bkg.influence',
+                             'Inventory', 'Enhancement', 'Category')
+  for(i in 1:nrow(footprint.df)) {
+  
+    #####################################################  
+    ### Convolve EDGAR (if available) with footprints ###
+    #####################################################
+    if(exists('EDGAR.df')) {
+      
+      #grab the 0.1 x 0.1
+      edgar.footprint <- stack(footprint.df$EDGAR.filepath[i])
+      
+      ### Calculate Background Influence ###
+      #integrate the footprint
+      #can't use raster package due to the generation of tmp files
+      steps <- names(edgar.footprint)
+      for(j in 1:length(steps)) {
+        #grab each layer as a tmp.layer
+        eval(parse(text = paste0('tmp.layer <- edgar.footprint$',
+                                 steps[j])))
+        #add the layers together
+        if(j == 1)
+          total.edgar.footprint <- tmp.layer
+        if(j > 1)
+          total.edgar.footprint <- total.edgar.footprint + tmp.layer
+      }; remove('tmp.layer') #save RAM
 
-  
-  #####################################
-  ### Next, read in the EDGAR files ###
-  #####################################
-  
-  ### All EDGAR sectors are listed below
-  ### Not all of them may be available
-  
-  # AGS - Agricultural soils
-  # AWB - Agricultural waste burning
-  # CHE - Chemical processes
-  # ENE - Power industry
-  # ENF - Enteric fermentation
-  # FFF - Fossil Fuel Fires
-  # IDE - Indirect emissions from NOx and NH3
-  # IND - Combustion for manufacturing
-  # IRO - Iron and steel production
-  # MNM - Manure management
-  # N2O - Indirect N2O emissions from agriculture
-  # PRO_COAL - Fuel exploitation COAL
-  # PRO_GAS - Fuel exploitation GAS
-  # PRO_OIL - Fuel exploitation OIL
-  # PRU_SOL - Solvents and products use
-  # RCO - Energy for buildings
-  # REF_TRF - Oil refineries and Transformation industry
-  # SWD_INC - Solid waste incineration
-  # SWD_LDF - Solid waste landfills
-  # TNR_Aviation_CDS - Aviation climbing&descent
-  # TNR_Aviation_CRS - Aviation cruise
-  # TNR_Aviation_LTO - Aviation landing&takeoff
-  # TNR_Other - Railways, pipelines, off-road transport
-  # TNR_Ship - Shipping
-  # TRO - Road transportation
-  # WWT - Waste water handling
-  
-  #all sectors
-  sectors <- c('AGS', 'AWB', 'CHE', 'ENE', 'ENF', 'NFE', 'FFF', 'IDE', 'IND', 'IRO',
-               'MNM', 'N2O', 'PRO', 'PRO_COAL', 'PRO_GAS', 'PRO_OIL', 'PRU_SOL', 'RCO',
-               'REF_TRF', 'SWD_INC', 'SWD_LDF', 'TNR_Aviation_CDS', 'TNR_Aviation_CRS',
-               'TNR_Aviation_LTO', 'TNR_Other', 'TNR_Ship', 'TRO', 'WWT')
-  
-  # identify available sectors
-  Available.Sector.List <- NULL; j <- 1
-  for(i in 1:length(sectors)) {
-    
-    # Step through the list of reported sectors and search for each file
-    eval(parse(text = paste0('tmp <- list.files(edgar.dir, pattern = "',
-                             sectors[i], '", full.names = TRUE)')))
-    
-    # If the file exists, save the file path to a custom variable
-    if(length(tmp) > 0) {
-      if(extension(tmp) == '.nc') {
-        Available.Sector.List[j] <- sectors[i]; j<-j+1      
-      }
-    }
-  }; remove('j')
-  #####################################
-  #####################################
-  #####################################
-  
-  ### Determine the total emissions from EDGAR ###
-  for(i in 1:length(Available.Sector.List)) {
-    
-    # Generate a temporary file path variable for each sector
-    temp.filepath <- list.files(edgar.dir,
-                                pattern = Available.Sector.List[i],
+      #save the footprint as a dataframe
+      total.edgar.footprint_df <-
+        raster::as.data.frame(total.edgar.footprint, xy = TRUE)
+      total.edgar.footprint_df <- subset(total.edgar.footprint_df,
+                                         layer > 0)
+      remove('total.edgar.footprint') #save RAM
+      
+      #determine background influence
+      is.polygon <- in.polygon(total.edgar.footprint_df[,1:2],
+                               polygon = urban.polygon[,1:2])
+      #record value
+      bkg.influence <-
+        nrow(subset(is.polygon, polygon == 'in'))/nrow(is.polygon)
+      ######################################
+      
+      #now, determine category contributions
+      for(j in 1:nrow(categories)) {
+        # Grab a category and loop through the sectors
+        sectors <- unlist(str_split(categories[j,2], pattern = ' '))
+        # Loop through each sector and convolve
+        for(k in 1:length(sectors)) {
+
+          #convolved edgar sector
+          sector.XCO2 <-
+            convolve.EDGAR.sector(footprint = edgar.footprint,
+                                  lon.lat = lon.lat,
+                                  sector.name = sectors[k],
+                                  edgar.inventory,
+                                  temporal.downscaling)
+          #add the sectoral emission to the category emission
+          if(k == 1) category.XCO2 <- sector.XCO2
+          if(k > 1) category.XCO2 <- category.XCO2 + sector.XCO2
+          remove('sector.XCO2') #save RAM
+        }#build category loop
+        
+        #rename and save the category convolution
+        names(category.XCO2) <- categories[j,1]
+        
+        #put these results together
+        EDGAR_add.line <- data.frame(footprint.df$date.time[i],
+                                     footprint.df$lon[i],
+                                     footprint.df$lat[i],
+                                     bkg.influence,
+                                     'EDGAR',
+                                     cellStats(category.XCO2, sum),
+                                     categories[j,1])
+        names(EDGAR_add.line) <- names(output.results)
+        
+        #rbind these results to the cumulative dataframe
+        output.results <- rbind(output.results, EDGAR_add.line)
+        
+        #X-STILT directory
+        directory <- list.files(EDGAR.directory,
+                                pattern = timestr,
                                 full.names = TRUE)
-    edgar.sector <- get.edgar.sector(nc.path = temp.filepath,
-                                     nc.extent = extent(footprint.raster))
-    
-    # Resample each edgar sector
-    resampled.sector <- resample(edgar.sector, ODIAC)
-    resampled.sector[resampled.sector < 0] <- 0
-    
-    if(i == 1) total.EDGAR <- resampled.sector
-    if(i > 1) total.EDGAR <- total.EDGAR + resampled.sector
-    remove('resampled.sector')
-    
-  }
-  
-  time <- gsub('X', '', layer.names)
-  for(i in 1:length(Available.Sector.List)) {
-    
-    ### Step through each time increment ###
-    for(j in 1:length(time)) {
-      
-      # Generate a temporary file path variable for each sector
-      temp.filepath <- list.files(edgar.dir,
-                                  pattern = Available.Sector.List[i],
-                                  full.names = TRUE)
-      edgar.sector <- get.edgar.sector(nc.path = temp.filepath,
-                                       nc.extent = extent(footprint.raster))
-      
-      # Resample each edgar sector
-      resampled.sector <- resample(edgar.sector, ODIAC)
-      resampled.sector[resampled.sector < 0] <- 0
-      
-      # Grab the weighting value for the sector here
-      weight <- edgar.sector.weighting(citylon, citylat, local.tz,
-                                       sector.name = Available.Sector.List[i],
-                                       temporal.downscaling.files = temp.dir,
-                                       time = time[j], monthly = TRUE)
-      weighted.sector <- weight*resampled.sector
-      names(weighted.sector) <- layer.names[j]
-      
-      # Grab the layer of interest
-      eval(parse(text = paste0('footprint.layer <- footprint.raster$',
-                               layer.names[j])))
-      
-      # Perform the weighting on the footprint layer (hour)
-      if(Available.Sector.List[i] != 'ENE') {
-        
-        # Weight ODIAC to generate the sector
-        # The weighted layer has NEW UNITS: Tonne Carbon/cell/hour
-        weighted.layer <-
-          (weighted.sector/total.EDGAR)*ODIAC.nlps
-        
-        ### Convert the weighted layer to umol/m2/s ###
-        #' This next bit of code has been modified from `get.odiac()`.
-        
-        # Compute area using area() function in raster package
-        area.raster <- raster::area(weighted.layer) * 1E6    # convert km2 to m2
-        
-        # Convert the unit of CO2 emiss from Tonne Carbon/cell/hour to umol/m2/s
-        weighted.layer <- weighted.layer * 1E6 / 12 * 1E6 # convert tonne-C to uomol-C (= umole-CO2)
-        weighted.layer <- weighted.layer / 60 / 60	# convert per month to per second
-        weighted.layer <- weighted.layer / area.raster		# convert per cell to per m2
-        # NOW sel.co2 has unit of umole-CO2/m2/s, can be used directly with footprint
-        
-        # Convolve with the footprint layer
-        weighted.XCO2.layer <- weighted.layer*footprint.layer
-        
-      } else if(Available.Sector.List[i] == 'ENE') {
-        # Weight ODIAC to generate the sector
-        weighted.layer <-
-          (weighted.sector/total.EDGAR)*ODIAC.lps
-        
-        ### Convert the weighted layer to umol/m2/s ###
-        # Compute area using area() function in raster package
-        area.raster <- raster::area(weighted.layer) * 1E6    # convert km2 to m2
-        
-        # Convert the unit of CO2 emiss from Tonne Carbon/cell/hour to umol/m2/s
-        weighted.layer <- weighted.layer * 1E6 / 12 * 1E6 # convert tonne-C to uomol-C (= umole-CO2)
-        weighted.layer <- weighted.layer / 60 / 60	# convert per month to per second
-        weighted.layer <- weighted.layer / area.raster		# convert per cell to per m2
-        # NOW sel.co2 has unit of umole-CO2/m2/s, can be used directly with footprint
-        
-        # Convolve with the footprint layer
-        weighted.XCO2.layer <- weighted.layer*footprint.layer
-      }
-      
-      if(j == 1) {
-        receptor.XCO2 <- weighted.XCO2.layer
-        remove('weighted.layer')
-      }
+        #category directory
+        raster.filepath <-
+          file.path(directory, 'XCO2', gsub(' ', '.', categories[j,1]))
+        if(!dir.exists(raster.filepath))
+          dir.create(raster.filepath, recursive = TRUE)
 
-      if(j > 1) {
-        receptor.XCO2 <- receptor.XCO2 + weighted.XCO2.layer
-        remove('weighted.layer')
-      }
+        #raster file name
+        raster.filename <-
+          paste(gsub(' ', '.',categories[j,1]),
+                gsub('X_foot.nc', 'XCO2.nc',
+                     basename(footprint.df$EDGAR.filepath[i])),
+                sep = '_')
+        
+        #save the raster!
+        writeRaster(category.XCO2,
+                    filename = file.path(raster.filepath,
+                                         raster.filename),
+                    overwrite = TRUE)
+        remove('category.XCO2')
+      }#close the category loop
+    } #closes EDGAR conditional statement
+    remove('edgar.footprint'); remove('EDGAR.df')
+    Sys.time()
+    #####################################################
+    #####################################################
+    
+    
+    
+    #####################################################  
+    ### Convolve ODIAC (if available) with footprints ###
+    #####################################################
+    if(exists('ODIAC.df')) {
       
-      message(paste0(i, '/', length(Available.Sector.List),
-                     '; ', j, '/', length(time)))
+      #grab the 0.1 x 0.1
+      odiac.footprint <- stack(footprint.df$ODIAC.filepath[i])
       
-    } # closes layer loop
-    
-    ######
+      #integrate the footprint
+      #can't use raster package due to the generation of tmp files
+      steps <- names(odiac.footprint)
+      for(j in 1:length(steps)) {
+        #grab each layer as a tmp.layer
+        eval(parse(text = paste0('tmp.layer <- odiac.footprint$',
+                                 steps[j])))
+        #add the layers together
+        if(j == 1)
+          total.odiac.footprint <- tmp.layer
+        if(j > 1)
+          total.odiac.footprint <- total.odiac.footprint + tmp.layer
+      }; remove('tmp.layer') #save RAM
+      
+      #determine XCO2 for a static inventory emissions
+      ODIAC <- get.odiac(tiff.path = odiac.inventory,
+                         nc.extent = extent(odiac.footprint),
+                         YYYYMM = substr(timestr, 1, 6),
+                         convert.units = TRUE)
+      static.XCO2 <- total.odiac.footprint*ODIAC
+      
+      static.XCO2_sum <- cellStats(static.XCO2, sum)
+      remove('static.XCO2'); remove('ODIAC') #save RAM
+      
+      #save the footprint as a dataframe
+      total.odiac.footprint_df <-
+        raster::as.data.frame(total.odiac.footprint, xy = TRUE)
+      total.odiac.footprint_df <- subset(total.odiac.footprint_df,
+                                         layer > 0)
+      remove('total.odiac.footprint') #save RAM
+      
+      #determine background influence
+      is.polygon <- in.polygon(total.odiac.footprint_df[,1:2],
+                               polygon = urban.polygon[,1:2])
+      #record value
+      bkg.influence <-
+        nrow(subset(is.polygon, polygon == 'in'))/nrow(is.polygon)
+      
+      ### Add Static Inventory Emissions Scenario to Results ###
+      #put these results together
+      ODIAC_add.line <- data.frame(footprint.df$date.time[i],
+                                   footprint.df$lon[i],
+                                   footprint.df$lat[i],
+                                   bkg.influence,
+                                   'ODIAC',
+                                   static.XCO2_sum,
+                                   'ODIAC (Static)')
+      names(ODIAC_add.line) <- names(output.results)
+      
+      #rbind these results to the cumulative dataframe
+      output.results <- rbind(output.results, ODIAC_add.line)
+      
+      #now, determine category values
+      for(j in 1:nrow(categories)) {
+        # Grab a category and loop through the sectors
+        sectors <- unlist(str_split(categories[j,2], pattern = ' '))
+        # Loop through each sector and convolve
+        for(k in 1:length(sectors)) {
 
-    # Create a sub-directory for the sector and basename for the XCO2 raster
-    receptor.XCO2.raster_name <-
-      paste(Available.Sector.List[i],
-             gsub('X_foot.nc', 'XCO2.nc', basename(footprint)), sep = '_')
+          #convolved edgar sector
+          sector.XCO2 <-
+            convolve.ODIAC.sector(footprint = odiac.footprint,
+                                  lon.lat = lon.lat,
+                                  sector.name = sectors[k],
+                                  categories,
+                                  edgar.inventory,
+                                  odiac.inventory,
+                                  temporal.downscaling)
+          
+          #add the sectoral emission to the category emission
+          if(k == 1) category.XCO2 <- sector.XCO2
+          if(k > 1) category.XCO2 <- category.XCO2 + sector.XCO2
+          remove('sector.XCO2') #save RAM
+        }#build category loop
+        
+        #rename and save the category convolution
+        names(category.XCO2) <- categories[j,1]
+        
+        EDGAR_add.line <- data.frame(footprint.df$date.time[i],
+                                     footprint.df$lon[i],
+                                     footprint.df$lat[i],
+                                     bkg.influence,
+                                     'EDGAR',
+                                     cellStats(category.XCO2, sum),
+                                     categories[j,1])
+        
+        #X-STILT directory
+        directory <- list.files(EDGAR.directory,
+                                pattern = timestr,
+                                full.names = TRUE)
+        #category directory
+        raster.filepath <-
+          file.path(directory, 'XCO2', gsub(' ', '.', categories[j,1]))
+        if(!dir.exists(raster.filepath))
+          dir.create(raster.filepath, recursive = TRUE)
+        
+        #raster file name
+        raster.filename <-
+          paste(gsub(' ', '.',categories[j,1]),
+                gsub('X_foot.nc', 'XCO2.nc',
+                     basename(footprint.df$EDGAR.filepath[i])),
+                sep = '_')
+        
+        #save the raster!
+        writeRaster(category.XCO2,
+                    filename = file.path(raster.filepath,
+                                         raster.filename),
+                    overwrite = TRUE)
+        remove('category.XCO2')
+      }#close the category loop
+    } #closes EDGAR conditional statement
+    #####################################################
+    #####################################################
     
-    # Directory
-    sector.out.dir <- file.path(out.dir, Available.Sector.List[i])
-    if(!dir.exists(sector.out.dir)) dir.create(sector.out.dir)
-    
-    # Save the raster
-    writeRaster(receptor.XCO2, overwrite = TRUE,
-                filename = file.path(sector.out.dir,
-                                     receptor.XCO2.raster_name))
-
-  }
   
-  # Converted ODIAC data
-  ODIAC.converted <- get.odiac(tiff.path = odiac.file,
-                               nc.extent = extent(footprint.raster),
-                               convert.units = TRUE)
+  } #closes footprint loop
   
-  # Create the summed footprint here for static emissions
-  # Raster functions would be faster but they generate temp files
-  # Thus, a low-tech for loop is used.
-  for(i in 1:length(time)) {
-    # Grab the layer of interest
-    eval(parse(text = paste0('footprint.layer <- footprint.raster$',
-                             layer.names[j])))
-    if(i == 1) summed.footprint <- footprint.layer
-    if(i > i) summed.footprint <- summed.footprint + footprint.layer
-  }
+  write.csv(row.names = FALSE)
   
-  # Static XCO2 directory
-  static.XCO2.dir <- file.path(out.dir, '_Static.XCO2')
-  if(!dir.exists(static.XCO2.dir)) dir.create(static.XCO2.dir)
-  
-  static.XCO2.raster_name <-
-    paste('static', gsub('X_foot.nc', 'XCO2.nc', basename(footprint)),
-          sep = '_')
-  
-  # Save the static raster
-  writeRaster(summed.footprint*ODIAC.converted, overwrite = TRUE,
-              filename = file.path(static.XCO2.dir,
-                                   static.XCO2.raster_name))
-  
-} # close function
+} #closes function
