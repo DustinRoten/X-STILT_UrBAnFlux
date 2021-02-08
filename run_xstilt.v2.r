@@ -13,26 +13,24 @@ odiac.vname <- c('2016', '2017', '2018', '2019', '2020')[5] # ODIAC version
  
 project <- oco.sensor   # name your project
 
-store.path <- '/uufs/chpc.utah.edu/common/home/lin-group11/XCO2_Climatology'
+store.path <-
+  '/uufs/chpc.utah.edu/common/home/lin-group11/XCO2_Climatology/ODIAC'
 
 ### setting up the OCO sounding search grid
 ### These variables will be ignored if 'OCO-2/OCO-3' is not selected
 urbanTF <- T; dlon.urban <- 0.75; dlat.urban <- 0.75
 timestr <- c(
-  NA
-  # '2020022419',
-  # '2020030316',
-  # '2020040121',
-  # '2020042320',
-  # '2020050516',
-  # '2020052700',
-  # '2020053022',
-  # '2020080420',
-  # '2020080818',
-  # '2020081217',
-  # '2020081423',
-  # '2020102021',
-  # '2020102818'
+  '2020022419',
+  '2020030316',
+  '2020040121',
+  '2020042320',
+  '2020050516',
+  '2020052700',
+  '2020053022',
+  '2020080420',
+  '2020081217',
+  '2020102021',
+  '2020102818'
 )# If unsure, set as NA.
 
 ### setting up the custom X-STILT grid
@@ -48,7 +46,8 @@ interpolation.resolution <- 2 # Set the size of interpolated subdomains (int >= 
 #Pacific time = 'America/Los_Angeles"
 time.zone <- 'America/Los_Angeles'
 
-#List the days and times here
+#List the days and times here (Modeled SAMs)
+#(enter local time)
 timestamp <- c('20200603-070000',
                '20200603-100000',
                '20200603-130000',
@@ -106,7 +105,7 @@ projection     <- '+proj=longlat'
 
 ## use SLURM for parallel simulation settings
 # time allowed for running hymodelc before forced terminations
-n_nodes  <- 4
+n_nodes  <- 7
 n_cores  <- 8
 timeout  <-  6 * 60 * 60  # in sec
 job.time <- '06:00:00'    # total job time
