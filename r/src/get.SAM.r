@@ -1,4 +1,4 @@
-get.SAM <- function(oco3.filepath, lon.lat) {
+get.SAM <- function(oco3.filepath, lon.lat, apply.filter = TRUE) {
   
   if(file.exists(oco3.filepath)) {
     oco.dat <- nc_open(oco3.filepath)
@@ -101,16 +101,25 @@ get.SAM <- function(oco3.filepath, lon.lat) {
     left_join(oco.vert.df, by = 'indx')
   
   # select regions, lon.lat: c(minlon, maxlon, minlat, maxlat) with buffer of 0.01deg
-  obs <- obs.vert %>% filter(mode == 'Land_SAM',
-                             lat >= lon.lat$minlat - 0.01, 
-                             lat <= lon.lat$maxlat + 0.01, 
-                             lon >= lon.lat$minlon - 0.01, 
-                             lon <= lon.lat$maxlon + 0.01) %>% 
+  # obs <- obs.vert %>% filter(mode == 'Land_SAM',
+  #                            lat >= lon.lat$minlat - 0.01, 
+  #                            lat <= lon.lat$maxlat + 0.01, 
+  #                            lon >= lon.lat$minlon - 0.01, 
+  #                            lon <= lon.lat$maxlon + 0.01) %>% 
+  #   mutate(timestr = substr(id, 1, 10))
+  
+  # select regions, lon.lat: c(minlon, maxlon, minlat, maxlat) with buffer of 0.01deg
+  obs <- obs.vert %>% filter(lat >= lon.lat$minlat - 0.01,
+                             lat <= lon.lat$maxlat + 0.01,
+                             lon >= lon.lat$minlon - 0.01,
+                             lon <= lon.lat$maxlon + 0.01) %>%
     mutate(timestr = substr(id, 1, 10))
   
   sel.mode <- unique(obs$mode); cat('Operational Modes:', unique(sel.mode), '\n\n')
   
   nc_close(oco.dat)
+  
+  if(apply.filter) obs <- subset(obs, qf == 0)
   
   return(obs)
 }
