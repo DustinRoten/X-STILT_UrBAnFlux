@@ -13,37 +13,38 @@ get.odiac <- function(tiff.path, nc.extent, YYYYMM = NULL,
   # Load required libraries
   library(raster)
   
-  ext <- extension(tiff.path)
-  if(ext == '.tif') {
-    
-    # Pull the year and date from the custom ODIAC filename format
-    string <- substr(tiff.path, (nchar(tiff.path)-7), (nchar(tiff.path)-4))
-    
-    # If YYYYMM is null, the default ODIAC filename format is assumed
-    # If YYYYMM is NOT null, the provided format will be used.
-    if(is.null(YYYYMM)) {
-      YYYY <- as.numeric(paste0('20', substr(string, 1, 2)))
-      MM <- as.numeric(substr(string, 3, 4))
-    } else if(!is.null(YYYYMM)) {
-      YYYY <- as.numeric(substr(YYYYMM, 1, 4))
-      MM <- as.numeric(substr(YYYYMM, 5, 6))
-    }
-    
-    # Check to see if YYYY is a leap year
-    # Difference in second entry of each vectory (February)
-    if((YYYY %% 400 == 0) | (YYYY %% 4 == 0)) {
-      month.days <- c(31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)[MM]
-    } else {
-      month.days <- c(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)[MM]
-    }
-    
-  } else {stop('Unsure of how to deal with provided ODIAC file format.')}
+  YYYY <- as.numeric(substr(YYYYMM, 1, 4))
+  YY_s <- substr(YYYYMM, 3, 4) #string format for searching
+  MM <- as.numeric(substr(YYYYMM, 5, 6))
+  MM_s <- substr(YYYYMM, 5, 6) #string format for searching
+  
+  # Find the closest match
+  odiac.file <-
+    list.files(tiff.path, pattern = paste0(YY_s, MM_s), full.names = TRUE)
+  if(length(odiac.file) == 0) {
+    message('No exact match for ODIAC file. Matching by month instead.')
+    odiac.file <- list.files(tiff.path,
+                             pattern = paste0(MM_s, '.tif'),
+                             full.names = TRUE)
+  }
+  
+  if(length(odiac.file) == 0)
+    message('Cannot find appropriate ODIAC file.')
   
   # 21600 rows and 43200 columns
-  emiss <- raster(tiff.path) # convert to raster
+  emiss <- raster(odiac.file) # convert to raster
+  
+  # Check to see if YYYY is a leap year
+  # Difference in second entry of each vectory (February)
+  if((YYYY %% 400 == 0) | (YYYY %% 4 == 0)) {
+    month.days <- c(31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)[MM]
+  } else {
+    month.days <- c(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)[MM]
+  }
 
   # subset spatial domain
   sel.emiss <- crop(emiss, nc.extent)
+  remove('emiss') #save RAM
 
   if(convert.units) {
   
